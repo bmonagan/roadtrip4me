@@ -1,4 +1,21 @@
 node_modules/
 dist/
 .env
-*.js.map
+.env.local
+.env.*.local
+*.log
+.DS_Store
+
+# Bun
+bun.lockb
+
+# Build outputs
+apps/web/dist/
+apps/api/dist/
+
+# IDE
+.vscode/
+.idea/
+
+# Docker
+*.pid
