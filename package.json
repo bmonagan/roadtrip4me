@@ -1,15 +1,23 @@
 {
   "name": "roadtrip4me",
-  "version": "1.0.0",
-  "main": "index.js",
+  "version": "0.0.1",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "bun run --filter './apps/*' dev",
+    "dev:web": "bun run --cwd apps/web dev",
+    "dev:api": "bun run --cwd apps/api dev",
+    "build": "bun run --filter './apps/*' build",
+    "lint": "bun run --filter '*' lint",
+    "typecheck": "bun run --filter '*' typecheck",
+    "format": "bunx prettier --write \"**/*.{ts,tsx,json,md}\""
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "description": "",
   "devDependencies": {
-    "typescript": "^6.0.3"
+    "@types/bun": "latest",
+    "prettier": "^3.3.3",
+    "typescript": "^5.5.4"
   }
 }
