@@ -19,3 +19,5 @@ apps/api/dist/
 
 # Docker
 *.pid
+
+/generated/prisma
