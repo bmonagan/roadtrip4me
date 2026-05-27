@@ -21,3 +21,5 @@ apps/api/dist/
 *.pid
 
 /generated/prisma
+
+notes/
