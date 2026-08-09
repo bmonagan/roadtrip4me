@@ -18,13 +18,17 @@
     "format": "bunx prettier --write \"**/*.{ts,tsx,json,md}\""
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@types/bun": "latest",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.15.1",
     "dotenv": "^16.6.1",
+    "eslint": "^10.8.1",
+    "eslint-plugin-react-hooks": "^7.1.1",
     "prettier": "^3.9.6",
     "prisma": "^7.9.1",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.66.0"
   },
   "dependencies": {
     "@prisma/client": "^7.9.1"

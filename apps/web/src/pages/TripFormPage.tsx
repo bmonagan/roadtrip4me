@@ -33,6 +33,7 @@ export default function TripFormPage() {
   const [endDate, setEndDate] = useState('');
   const [formError, setFormError] = useState<string | null>(null);
 
+  /* eslint-disable react-hooks/set-state-in-effect -- seed the form from the fetched trip once */
   useEffect(() => {
     if (!trip) return;
     setTitle(trip.title);
@@ -47,6 +48,7 @@ export default function TripFormPage() {
     setStartDate(toDateInputValue(trip.startDate));
     setEndDate(toDateInputValue(trip.endDate));
   }, [trip]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const mutation = useMutation({
     mutationFn: () =>

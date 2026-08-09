@@ -5,38 +5,31 @@ import { exchangeCodeForToken } from '../auth/pkce';
 
 export default function CallbackPage() {
   const navigate = useNavigate();
-  const [error, setError] = useState<string | null>(null);
   const started = useRef(false);
 
+  // Parse and validate the redirect params synchronously at render time.
+  const params = new URLSearchParams(window.location.search);
+  const code = params.get('code');
+  const state = params.get('state');
+  const errorParam = params.get('error');
+  const expectedState = sessionStorage.getItem('roadtrip4me.pkce_state');
+  const codeVerifier = sessionStorage.getItem('roadtrip4me.pkce_verifier');
+
+  const initialError = errorParam
+    ? `Authentication failed: ${errorParam}`
+    : !code
+      ? 'Missing authorization code'
+      : state !== expectedState
+        ? 'State mismatch — please try logging in again'
+        : !codeVerifier
+          ? 'Missing PKCE verifier — please try logging in again'
+          : null;
+
+  const [error, setError] = useState<string | null>(initialError);
+
   useEffect(() => {
-    if (started.current) return;
+    if (started.current || !code || !codeVerifier || error) return;
     started.current = true;
-
-    const params = new URLSearchParams(window.location.search);
-    const code = params.get('code');
-    const state = params.get('state');
-    const errorParam = params.get('error');
-
-    if (errorParam) {
-      setError(`Authentication failed: ${errorParam}`);
-      return;
-    }
-    if (!code) {
-      setError('Missing authorization code');
-      return;
-    }
-
-    const expectedState = sessionStorage.getItem('roadtrip4me.pkce_state');
-    if (state !== expectedState) {
-      setError('State mismatch — please try logging in again');
-      return;
-    }
-
-    const codeVerifier = sessionStorage.getItem('roadtrip4me.pkce_verifier');
-    if (!codeVerifier) {
-      setError('Missing PKCE verifier — please try logging in again');
-      return;
-    }
 
     exchangeCodeForToken({
       domain: authConfig.domain,
@@ -52,7 +45,7 @@ export default function CallbackPage() {
         navigate('/', { replace: true });
       })
       .catch((e) => setError((e as Error).message));
-  }, [navigate]);
+  }, [code, codeVerifier, error, navigate]);
 
   if (error) {
     return (

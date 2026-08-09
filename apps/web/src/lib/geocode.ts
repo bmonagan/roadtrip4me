@@ -2,7 +2,7 @@ import type { TripPlace } from './api';
 
 const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN;
 
-export interface GeocodeResult extends TripPlace {}
+export type GeocodeResult = TripPlace;
 
 export async function geocode(query: string): Promise<GeocodeResult[]> {
   if (!MAPBOX_TOKEN) return [];

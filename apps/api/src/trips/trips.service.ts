@@ -89,7 +89,7 @@ export class TripsService {
   }
 
   async update(userId: string, id: string, dto: UpdateTripDto): Promise<Trip> {
-    const trip = await this.findOwnedTrip(userId, id);
+    await this.ensureTripOwned(userId, id);
 
     const updated = await this.prisma.trip.update({
       where: { id },

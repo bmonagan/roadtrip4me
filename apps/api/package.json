@@ -7,7 +7,7 @@
     "build": "bun build src/main.ts --outdir dist --target bun --external '@nestjs/microservices' --external '@nestjs/platform-express' --external '@nestjs/websockets' --external '@fastify/static' --external '@fastify/view'",
     "start": "bun dist/main.js",
     "typecheck": "tsc --noEmit",
-    "lint": "bunx eslint 'src/**/*.ts'"
+    "lint": "eslint src"
   },
   "dependencies": {
     "@googlemaps/polyline-codec": "^1.0.28",

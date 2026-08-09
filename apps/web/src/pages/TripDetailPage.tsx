@@ -27,8 +27,9 @@ export default function TripDetailPage() {
 
   // Route computation is async (BullMQ) — refetch until the polyline appears.
   const routePollAttempts = useRef(0);
+  const hasRoute = Boolean(trip?.encodedPolyline);
   useEffect(() => {
-    if (!id || !trip || trip.encodedPolyline) return;
+    if (!id || hasRoute) return;
     const interval = setInterval(() => {
       if (routePollAttempts.current++ >= ROUTE_POLL_MAX) {
         clearInterval(interval);
@@ -37,7 +38,7 @@ export default function TripDetailPage() {
       queryClient.invalidateQueries({ queryKey: ['trip', id] });
     }, ROUTE_POLL_MS);
     return () => clearInterval(interval);
-  }, [id, trip?.encodedPolyline, queryClient]);
+  }, [id, hasRoute, queryClient]);
 
   const removeStop = useMutation({
     mutationFn: (stopId: string) => api.trips.removeStop(id!, stopId),
