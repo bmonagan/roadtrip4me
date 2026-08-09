@@ -1,11 +1,32 @@
 import { useEffect, useRef } from 'react';
 import mapboxgl from 'mapbox-gl';
+import { decode } from '@googlemaps/polyline-codec';
 import type { Trip } from '@roadtrip4me/types';
 
 const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN;
 
 if (MAPBOX_TOKEN) {
   mapboxgl.accessToken = MAPBOX_TOKEN;
+}
+
+// Real route from Google when stored; otherwise fall back to a straight line
+// through origin → stops → destination.
+function routeCoordinates(trip: Trip): [number, number][] {
+  if (trip.encodedPolyline) {
+    try {
+      const decoded = decode(trip.encodedPolyline);
+      if (decoded.length >= 2) {
+        return decoded.map(([lat, lng]) => [lng, lat] as [number, number]);
+      }
+    } catch {
+      // malformed polyline — fall through to the straight-line route
+    }
+  }
+  return [
+    [trip.origin.lng, trip.origin.lat],
+    ...trip.stops.map((s) => [s.coordinates.lng, s.coordinates.lat] as [number, number]),
+    [trip.destination.lng, trip.destination.lat],
+  ];
 }
 
 export default function TripMap({ trip }: { trip: Trip }) {
@@ -27,18 +48,14 @@ export default function TripMap({ trip }: { trip: Trip }) {
     map.addControl(new mapboxgl.NavigationControl(), 'top-right');
 
     map.on('load', () => {
-      const routeCoordinates: [number, number][] = [
-        [trip.origin.lng, trip.origin.lat],
-        ...trip.stops.map((s) => [s.coordinates.lng, s.coordinates.lat] as [number, number]),
-        [trip.destination.lng, trip.destination.lat],
-      ];
+      const coords = routeCoordinates(trip);
 
       map.addSource('route', {
         type: 'geojson',
         data: {
           type: 'Feature',
           properties: {},
-          geometry: { type: 'LineString', coordinates: routeCoordinates },
+          geometry: { type: 'LineString', coordinates: coords },
         },
       });
       map.addLayer({
@@ -64,9 +81,9 @@ export default function TripMap({ trip }: { trip: Trip }) {
           .addTo(map);
       });
 
-      const bounds = routeCoordinates.reduce(
+      const bounds = coords.reduce(
         (b, [lng, lat]) => b.extend([lng, lat]),
-        new mapboxgl.LngLatBounds(routeCoordinates[0], routeCoordinates[0])
+        new mapboxgl.LngLatBounds(coords[0], coords[0])
       );
       map.fitBounds(bounds, { padding: 60 });
     });
