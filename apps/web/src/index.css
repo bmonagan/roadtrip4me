@@ -23,3 +23,249 @@ body {
   display: flex;
   flex-direction: column;
 }
+
+/* ─── Layout ──────────────────────────────────────────────────────────────── */
+
+.site-header {
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+  padding: 1rem 2rem;
+  border-bottom: 1px solid #8884;
+}
+.site-header .brand {
+  font-weight: 700;
+  text-decoration: none;
+  color: inherit;
+}
+.site-nav {
+  display: flex;
+  gap: 1rem;
+}
+.site-nav a {
+  text-decoration: none;
+  color: inherit;
+  opacity: 0.7;
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+}
+.site-nav a:hover {
+  opacity: 1;
+}
+.site-nav a.active {
+  opacity: 1;
+  background: #8882;
+}
+
+.site-main {
+  flex: 1;
+  width: 100%;
+  max-width: 64rem;
+  margin: 0 auto;
+  padding: 1.5rem 2rem 3rem;
+}
+
+.page h1 {
+  margin-bottom: 1rem;
+}
+
+.muted {
+  color: #888;
+}
+.error {
+  color: #ef4444;
+  padding: 0.5rem 0;
+}
+
+/* ─── Cards ──────────────────────────────────────────────────────────────── */
+
+.card-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.card {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+  border: 1px solid #8884;
+  border-radius: 10px;
+  padding: 1rem;
+  background: #00000008;
+  text-decoration: none;
+  color: inherit;
+}
+.card:hover {
+  background: #00000012;
+}
+
+.card-body {
+  flex: 1;
+}
+.card-body h3 {
+  margin-bottom: 0.25rem;
+}
+
+.card-meta {
+  display: flex;
+  gap: 1.5rem;
+}
+.card-meta div {
+  display: flex;
+  flex-direction: column;
+}
+.card-meta dt {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #888;
+}
+.card-meta dd {
+  font-weight: 600;
+}
+
+.back-link {
+  display: inline-block;
+  margin-bottom: 1rem;
+  color: inherit;
+  opacity: 0.7;
+}
+
+/* ─── Trip detail ────────────────────────────────────────────────────────── */
+
+.trip-header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-bottom: 1rem;
+}
+
+.trip-map {
+  width: 100%;
+  height: 24rem;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid #8884;
+  margin-bottom: 1.5rem;
+}
+
+.badge {
+  display: inline-block;
+  padding: 0.15rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  width: fit-content;
+}
+.badge.status-planned {
+  background: #3b82f622;
+  color: #3b82f6;
+}
+.badge.status-draft {
+  background: #8883;
+}
+.badge.status-completed {
+  background: #10b98122;
+  color: #10b981;
+}
+.badge.status-in_progress {
+  background: #f59e0b22;
+  color: #f59e0b;
+}
+.badge.vibe {
+  background: #8882;
+  margin-right: 0.35rem;
+}
+
+.stop-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+  padding-left: 1.25rem;
+}
+.stop-item::marker {
+  font-weight: 600;
+}
+
+/* ─── Stops page ─────────────────────────────────────────────────────────── */
+
+.toolbar {
+  margin-bottom: 1rem;
+}
+.toolbar select {
+  margin-left: 0.35rem;
+}
+
+.nearby {
+  margin-bottom: 2rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #8883;
+}
+.nearby h2 {
+  margin-bottom: 0.5rem;
+}
+
+button.primary {
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  border: 1px solid #8885;
+  background: #3b82f6;
+  color: white;
+  cursor: pointer;
+}
+button.primary:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.stop-description {
+  margin-top: 0.35rem;
+  font-size: 0.9rem;
+}
+
+/* ─── Vote buttons ───────────────────────────────────────────────────────── */
+
+.vote-buttons {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.1rem;
+  min-width: 3rem;
+  padding-top: 0.15rem;
+}
+.vote-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 0.9rem;
+  color: #888;
+  padding: 0.1rem 0.4rem;
+}
+.vote-btn:hover {
+  color: inherit;
+}
+.vote-btn:disabled {
+  opacity: 0.5;
+}
+.vote-btn.active-up {
+  color: #10b981;
+}
+.vote-btn.active-down {
+  color: #ef4444;
+}
+.vote-score {
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+.vote-score.positive {
+  color: #10b981;
+}
+.vote-score.negative {
+  color: #ef4444;
+}
+.vote-count {
+  font-size: 0.75rem;
+}
