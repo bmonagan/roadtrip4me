@@ -1,4 +1,5 @@
 import 'reflect-metadata';
+import { randomUUID } from 'node:crypto';
 import { NestFactory } from '@nestjs/core';
 import {
   FastifyAdapter,
@@ -38,11 +39,16 @@ function contentSecurityPolicy(): string {
 async function bootstrap() {
   const app = await NestFactory.create<NestFastifyApplication>(
     AppModule,
-    new FastifyAdapter({ logger: true, trustProxy: true })
+    new FastifyAdapter({
+      logger: true,
+      trustProxy: true,
+      genReqId: () => randomUUID(),
+    })
   );
 
   const fastify = app.getHttpAdapter().getInstance();
-  fastify.addHook('onSend', async (_request, reply, payload) => {
+  fastify.addHook('onSend', async (request, reply, payload) => {
+    reply.header('X-Request-Id', request.id);
     reply.header('X-Content-Type-Options', 'nosniff');
     reply.header('X-Frame-Options', 'DENY');
     reply.header('Referrer-Policy', 'strict-origin-when-cross-origin');
