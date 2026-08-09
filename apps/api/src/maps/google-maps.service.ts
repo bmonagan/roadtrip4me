@@ -3,6 +3,7 @@ import { encode } from '@googlemaps/polyline-codec';
 import type { GeoPoint } from '../common/geo';
 
 const ROUTES_API_URL = 'https://routes.googleapis.com/directions/v2:computeRoutes';
+const PLACES_API_URL = 'https://places.googleapis.com/v1/places:searchText';
 const MAX_INTERMEDIATES = 25;
 
 export interface RouteResult {
@@ -82,6 +83,44 @@ export class GoogleMapsService {
     return {
       location: { latLng: { latitude: point.lat, longitude: point.lng } },
     };
+  }
+
+  /**
+   * Resolves a place name to real coordinates via the Places API Text Search.
+   * Returns null when the API is unavailable or nothing matches — callers
+   * should fall back to their existing (approximate) coordinates.
+   */
+  async searchPlace(textQuery: string): Promise<GeoPoint | null> {
+    const apiKey = process.env['GOOGLE_MAPS_API_KEY'];
+    if (!apiKey) return null;
+
+    try {
+      const res = await fetch(PLACES_API_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Goog-Api-Key': apiKey,
+          'X-Goog-FieldMask': 'places.location,places.displayName',
+        },
+        body: JSON.stringify({ textQuery, languageCode: 'en' }),
+      });
+      if (!res.ok) return null;
+
+      const data = (await res.json()) as {
+        places?: { location?: { latitude?: number; longitude?: number } }[];
+      };
+      const location = data.places?.[0]?.location;
+      if (
+        !location ||
+        typeof location.latitude !== 'number' ||
+        typeof location.longitude !== 'number'
+      ) {
+        return null;
+      }
+      return { lat: location.latitude, lng: location.longitude };
+    } catch {
+      return null;
+    }
   }
 }
 

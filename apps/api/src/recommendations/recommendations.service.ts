@@ -4,8 +4,9 @@ import type { StopRecommendation } from '@roadtrip4me/types';
 import type { Trip as TripModel } from '../generated/prisma/client';
 import { distanceToRouteMeters, type GeoPoint } from '../common/geo';
 import { PrismaService } from '../prisma/prisma.service';
+import { GoogleMapsService } from '../maps/google-maps.service';
 import { deepseekJson } from './deepseek';
-import { STOP_CATEGORIES, parseStops } from './parse';
+import { STOP_CATEGORIES, parseStops, type ParsedStop } from './parse';
 import type { RecommendationRequestDto } from './dto/recommendation-request.dto';
 
 export type RecommendedStop = StopRecommendation & { city: string; state: string };
@@ -35,7 +36,10 @@ Rules:
 
 @Injectable()
 export class RecommendationsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly maps: GoogleMapsService,
+  ) {}
 
   async recommend(
     userId: string,
@@ -54,7 +58,7 @@ export class RecommendationsService {
 
     const route = await this.buildRoute(trip);
     const raw = await deepseekJson(apiKey, SYSTEM_PROMPT, this.buildUserPrompt(trip, dto));
-    const parsed = parseStops(raw);
+    const parsed = await this.enrichCoordinates(parseStops(raw));
 
     return parsed.map((stop) => ({
       name: stop.name,
@@ -68,6 +72,19 @@ export class RecommendationsService {
       city: stop.city,
       state: stop.state,
     }));
+  }
+
+  // LLM-provided coordinates are approximate. Reconcile each stop against the
+  // Places API (best-effort, in parallel); fall back to the LLM values when a
+  // lookup fails or the Places API isn't enabled.
+  private async enrichCoordinates(stops: ParsedStop[]): Promise<ParsedStop[]> {
+    return Promise.all(
+      stops.map(async (stop) => {
+        const query = `${stop.name}${stop.city ? `, ${stop.city}` : ''}${stop.state ? `, ${stop.state}` : ''}`;
+        const coords = await this.maps.searchPlace(query);
+        return coords ? { ...stop, lat: coords.lat, lng: coords.lng } : stop;
+      })
+    );
   }
 
   private async buildRoute(trip: TripModel): Promise<GeoPoint[]> {
