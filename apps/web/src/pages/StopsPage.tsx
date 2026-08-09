@@ -4,6 +4,7 @@ import type { Stop } from '@roadtrip4me/types';
 import { api } from '../lib/api';
 import { formatDistance, titleCase } from '../lib/format';
 import VoteButtons from '../components/VoteButtons';
+import AddToTrip from '../components/AddToTrip';
 
 const CATEGORIES = [
   'restaurant',
@@ -73,6 +74,7 @@ function StopCard({ stop }: { stop: Stop }) {
         </p>
         {stop.description && <p className="stop-description">{stop.description}</p>}
       </div>
+      <AddToTrip stopId={stop.id} />
     </li>
   );
 }
@@ -126,6 +128,7 @@ function NearbyStops() {
                   {formatDistance(stop.distanceMeters)} away · {titleCase(stop.category)}
                 </p>
               </div>
+              <AddToTrip stopId={stop.id} />
             </li>
           ))}
         </ul>
