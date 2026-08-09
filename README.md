@@ -92,7 +92,7 @@ bun run format      # Format with Prettier
 |---|---|---|
 | Google Maps | Routing + Places | [console.cloud.google.com](https://console.cloud.google.com) |
 | Mapbox | Map display | [mapbox.com](https://mapbox.com) |
-| OpenAI | Stop recommendations | [platform.openai.com](https://platform.openai.com) |
+| DeepSeek | Stop recommendations | [platform.deepseek.com](https://platform.deepseek.com) |
 | Yelp Fusion | Restaurant/activity data | [yelp.com/developers](https://www.yelp.com/developers) |
 | Auth0 | Authentication | [auth0.com](https://auth0.com) |
 | Booking.com | Hotel affiliate | [booking.com/affiliate](https://www.booking.com/affiliate) |
