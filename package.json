@@ -11,6 +11,8 @@
     "dev:web": "bun run --cwd apps/web dev",
     "dev:api": "bun run --cwd apps/api dev",
     "build": "bun run --filter './apps/*' build",
+    "start": "bun run --cwd apps/api start",
+    "preview": "bun run --cwd apps/web preview",
     "lint": "bun run --filter '*' lint",
     "typecheck": "bun run --filter '*' typecheck",
     "format": "bunx prettier --write \"**/*.{ts,tsx,json,md}\""

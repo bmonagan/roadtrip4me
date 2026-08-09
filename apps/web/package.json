@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
-    "preview": "vite preview",
+    "preview": "vite preview --port 5173 --strictPort",
     "typecheck": "tsc --noEmit",
     "lint": "bunx eslint 'src/**/*.{ts,tsx}'"
   },
