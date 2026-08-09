@@ -1,6 +1,7 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
 import { CurrentUserId } from '../common/decorators/current-user-id.decorator';
 import { TripsService } from './trips.service';
+import { AddStopDto } from './dto/add-stop.dto';
 import { CreateTripDto } from './dto/create-trip.dto';
 import { ListTripsQueryDto } from './dto/list-trips-query.dto';
 import { UpdateTripDto } from './dto/update-trip.dto';
@@ -27,6 +28,20 @@ export class TripsController {
   @Patch(':id')
   update(@CurrentUserId() userId: string, @Param('id') id: string, @Body() dto: UpdateTripDto) {
     return this.tripsService.update(userId, id, dto);
+  }
+
+  @Post(':id/stops')
+  addStop(@CurrentUserId() userId: string, @Param('id') id: string, @Body() dto: AddStopDto) {
+    return this.tripsService.addStop(userId, id, dto.stopId);
+  }
+
+  @Delete(':id/stops/:stopId')
+  removeStop(
+    @CurrentUserId() userId: string,
+    @Param('id') id: string,
+    @Param('stopId') stopId: string
+  ) {
+    return this.tripsService.removeStop(userId, id, stopId);
   }
 
   @Delete(':id')

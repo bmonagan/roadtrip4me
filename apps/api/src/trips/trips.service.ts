@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import type { PaginatedResponse, Trip, TripSummary } from '@roadtrip4me/types';
 import type {
   Stop as StopModel,
@@ -120,6 +120,61 @@ export class TripsService {
     return { deleted: true };
   }
 
+  async addStop(userId: string, tripId: string, stopId: string): Promise<Trip> {
+    await this.ensureTripOwned(userId, tripId);
+
+    const stop = await this.prisma.stop.findUnique({ where: { id: stopId }, select: { id: true } });
+    if (!stop) {
+      throw new NotFoundException(`Stop ${stopId} not found`);
+    }
+
+    await this.prisma.$transaction(async (tx) => {
+      const existing = await tx.tripStop.findUnique({
+        where: { tripId_stopId: { tripId, stopId } },
+        select: { id: true },
+      });
+      if (existing) {
+        throw new ConflictException('Stop already on this trip');
+      }
+
+      // order is unique per trip — append at the end.
+      const last = await tx.tripStop.findFirst({
+        where: { tripId },
+        orderBy: { order: 'desc' },
+        select: { order: true },
+      });
+      await tx.tripStop.create({ data: { tripId, stopId, order: (last?.order ?? 0) + 1 } });
+    });
+
+    return this.findOne(userId, tripId);
+  }
+
+  async removeStop(userId: string, tripId: string, stopId: string): Promise<Trip> {
+    await this.ensureTripOwned(userId, tripId);
+
+    const deleted = await this.prisma.$transaction(async (tx) => {
+      const result = await tx.tripStop.deleteMany({ where: { tripId, stopId } });
+      if (result.count > 0) {
+        // Re-number remaining stops so order stays contiguous (no gaps).
+        const remaining = await tx.tripStop.findMany({
+          where: { tripId },
+          orderBy: { order: 'asc' },
+          select: { id: true },
+        });
+        for (const [index, ts] of remaining.entries()) {
+          await tx.tripStop.update({ where: { id: ts.id }, data: { order: index + 1 } });
+        }
+      }
+      return result;
+    });
+
+    if (deleted.count === 0) {
+      throw new NotFoundException('Stop not on this trip');
+    }
+
+    return this.findOne(userId, tripId);
+  }
+
   // The geography columns are PostGIS-only and unsupported by Prisma, so they
   // are written with raw SQL after the row is created/updated.
   private setGeographyPoints(tripId: string, origin: PlaceDto, destination: PlaceDto) {
@@ -129,6 +184,16 @@ export class TripsService {
         "destPoint"   = ST_SetSRID(ST_Point(${destination.lng}, ${destination.lat}), 4326)::geography
       WHERE id = ${tripId}
     `;
+  }
+
+  private async ensureTripOwned(userId: string, tripId: string): Promise<void> {
+    const trip = await this.prisma.trip.findFirst({
+      where: { id: tripId, userId },
+      select: { id: true },
+    });
+    if (!trip) {
+      throw new NotFoundException(`Trip ${tripId} not found`);
+    }
   }
 
   private async findOwnedTrip(userId: string, id: string): Promise<TripWithRelations> {
