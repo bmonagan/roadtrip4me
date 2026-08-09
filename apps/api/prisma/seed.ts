@@ -23,10 +23,12 @@ async function main() {
   await prisma.stop.deleteMany();
 
   // ── Users ──────────────────────────────────────────────────────────────────
+  // Fixed ids so the dev frontend can send a stable x-user-id header.
   const alice = await prisma.user.upsert({
     where: { email: 'alice@example.com' },
     update: {},
     create: {
+      id: 'user_alice',
       authId: 'auth0|seed_alice',
       email: 'alice@example.com',
       displayName: 'Alice Wanderer',
@@ -38,6 +40,7 @@ async function main() {
     where: { email: 'bob@example.com' },
     update: {},
     create: {
+      id: 'user_bob',
       authId: 'auth0|seed_bob',
       email: 'bob@example.com',
       displayName: 'Bob Roadrunner',
