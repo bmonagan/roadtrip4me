@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import type { PaginatedResponse, Stop, Trip, TripSummary } from '@roadtrip4me/types';
+import type { PaginatedResponse, Trip, TripSummary } from '@roadtrip4me/types';
 import type {
   Stop as StopModel,
   Trip as TripModel,
@@ -7,6 +7,7 @@ import type {
   TripVibe,
   TripWaypoint as TripWaypointModel,
 } from '../generated/prisma/client';
+import { mapStop } from '../common/mappers/stop.mapper';
 import { PrismaService } from '../prisma/prisma.service';
 import type { CreateTripDto } from './dto/create-trip.dto';
 import type { ListTripsQueryDto } from './dto/list-trips-query.dto';
@@ -187,35 +188,12 @@ function toTrip(trip: TripWithRelations): Trip {
       label: w.label,
       stopId: w.stopId,
     })),
-    stops: trip.tripStops.map((ts) => toStop(ts.stop)),
+    stops: trip.tripStops.map((ts) => mapStop(ts.stop)),
     startDate: trip.startDate?.toISOString() ?? null,
     endDate: trip.endDate?.toISOString() ?? null,
     totalDistanceMeters: trip.totalDistanceMeters,
     totalDurationSeconds: trip.totalDurationSeconds,
     createdAt: trip.createdAt.toISOString(),
     updatedAt: trip.updatedAt.toISOString(),
-  };
-}
-
-function toStop(stop: StopModel): Stop {
-  return {
-    id: stop.id,
-    name: stop.name,
-    description: stop.description,
-    coordinates: { lat: stop.lat, lng: stop.lng },
-    address: {
-      street: stop.street,
-      city: stop.city,
-      state: stop.state,
-      country: stop.country,
-      postalCode: stop.postalCode,
-    },
-    category: stop.category,
-    imageUrl: stop.imageUrl,
-    externalId: stop.externalId,
-    score: stop.score,
-    voteCount: stop.voteCount,
-    submittedByUserId: stop.submittedByUserId,
-    createdAt: stop.createdAt.toISOString(),
   };
 }
