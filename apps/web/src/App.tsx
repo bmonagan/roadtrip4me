@@ -1,4 +1,4 @@
-import { NavLink, Route, Routes, useSearchParams } from 'react-router-dom';
+import { NavLink, Link, Route, Routes, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
 import { useAuth } from './auth/AuthContext';
@@ -8,6 +8,8 @@ import TripDetailPage from './pages/TripDetailPage';
 import TripFormPage from './pages/TripFormPage';
 import StopsPage from './pages/StopsPage';
 import CallbackPage from './pages/CallbackPage';
+import LegalPage from './pages/LegalPage';
+import CookieConsent from './components/CookieConsent';
 
 export default function App() {
   const { isAuthenticated, authMode, login, logout } = useAuth();
@@ -82,9 +84,17 @@ export default function App() {
           <Route path="/trips/:id" element={<TripDetailPage />} />
           <Route path="/trips/:id/edit" element={<TripFormPage />} />
           <Route path="/stops" element={<StopsPage />} />
+          <Route path="/terms" element={<LegalPage kind="terms" />} />
+          <Route path="/privacy" element={<LegalPage kind="privacy" />} />
           <Route path="/auth/callback" element={<CallbackPage />} />
         </Routes>
       </main>
+      <footer className="site-footer">
+        <Link to="/terms">Terms</Link>
+        <Link to="/privacy">Privacy</Link>
+        <span className="muted">© {new Date().getFullYear()} Roadtrip4me</span>
+      </footer>
+      <CookieConsent />
     </>
   );
 }

@@ -70,6 +70,55 @@ body {
   padding: 1.5rem 2rem 3rem;
 }
 
+.site-footer {
+  display: flex;
+  gap: 1.25rem;
+  align-items: center;
+  padding: 1rem 2rem;
+  border-top: 1px solid #8884;
+  font-size: 0.9rem;
+}
+.site-footer a {
+  color: inherit;
+  opacity: 0.75;
+}
+
+.cookie-banner {
+  position: fixed;
+  bottom: 1rem;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(36rem, calc(100vw - 2rem));
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  justify-content: space-between;
+  background: #111;
+  color: #fff;
+  border-radius: 12px;
+  padding: 0.9rem 1.1rem;
+  box-shadow: 0 8px 24px #0005;
+  z-index: 100;
+}
+.cookie-banner a {
+  color: #93c5fd;
+}
+@media (prefers-color-scheme: light) {
+  .cookie-banner {
+    background: #222;
+  }
+}
+
+.legal-body h2 {
+  margin-top: 1.25rem;
+}
+.legal-body p {
+  margin-top: 0.35rem;
+}
+.legal h1 {
+  margin-bottom: 0.25rem;
+}
+
 .page h1 {
   margin-bottom: 1rem;
 }
