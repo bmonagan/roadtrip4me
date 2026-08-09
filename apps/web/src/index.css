@@ -1,4 +1,6 @@
-*, *::before, *::after {
+*,
+*::before,
+*::after {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
@@ -224,6 +226,240 @@ button.primary:disabled {
 .stop-description {
   margin-top: 0.35rem;
   font-size: 0.9rem;
+}
+
+/* ─── Forms ───────────────────────────────────────────────────────────────── */
+
+.form-page form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  margin-top: 1rem;
+}
+.form-page label,
+.place-search {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+.form-page label span,
+.place-search span {
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+.form-page input[type='text'],
+.form-page input[type='date'],
+.form-page select,
+.place-search input {
+  padding: 0.55rem 0.75rem;
+  border-radius: 8px;
+  border: 1px solid #8885;
+  background: #00000006;
+  font: inherit;
+}
+.form-page input:focus,
+.place-search input:focus,
+.form-page select:focus {
+  outline: 2px solid #3b82f655;
+  border-color: #3b82f6;
+}
+
+.form-row {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+.form-row > * {
+  flex: 1;
+  min-width: 12rem;
+}
+
+.vibe-fieldset {
+  border: 1px solid #8884;
+  border-radius: 10px;
+  padding: 0.75rem 1rem 1rem;
+}
+.vibe-fieldset legend {
+  padding: 0 0.35rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+.vibe-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.chip {
+  padding: 0.3rem 0.85rem;
+  border-radius: 999px;
+  border: 1px solid #8885;
+  background: none;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+  opacity: 0.7;
+}
+.chip-active {
+  background: #3b82f622;
+  border-color: #3b82f6;
+  color: #3b82f6;
+  opacity: 1;
+}
+
+/* ─── Place search ───────────────────────────────────────────────────────── */
+
+.place-search {
+  position: relative;
+}
+.place-results {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  margin-top: 0.25rem;
+  list-style: none;
+  background: #fff;
+  color: #111;
+  border: 1px solid #8885;
+  border-radius: 8px;
+  box-shadow: 0 6px 16px #0002;
+  overflow: hidden;
+  z-index: 10;
+}
+.place-results li button,
+.trip-picker li button {
+  width: 100%;
+  text-align: left;
+  padding: 0.5rem 0.75rem;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font: inherit;
+}
+.place-results li button:hover {
+  background: #3b82f610;
+}
+@media (prefers-color-scheme: dark) {
+  .place-results {
+    background: #1e1e1e;
+    color: #eee;
+  }
+}
+
+/* ─── Buttons ────────────────────────────────────────────────────────────── */
+
+.btn {
+  display: inline-block;
+  padding: 0.45rem 0.9rem;
+  border-radius: 8px;
+  border: 1px solid #8885;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  text-decoration: none;
+  font-size: 0.9rem;
+}
+.btn:hover {
+  background: #8882;
+}
+.btn.primary {
+  background: #3b82f6;
+  color: white;
+  border-color: transparent;
+}
+.btn.primary:hover {
+  background: #2f6fd6;
+}
+.btn.danger {
+  color: #ef4444;
+}
+.btn.small {
+  padding: 0.25rem 0.6rem;
+  font-size: 0.8rem;
+}
+.btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.page-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+.page-head h1 {
+  margin-bottom: 0;
+}
+
+.trip-title-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+.trip-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-left: auto;
+}
+
+.stops-section h2 {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.stop-item {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.stop-item-body {
+  flex: 1;
+}
+
+/* ─── Add to trip ────────────────────────────────────────────────────────── */
+
+.add-to-trip {
+  position: relative;
+  align-self: center;
+}
+.trip-picker {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 0.25rem);
+  list-style: none;
+  background: #fff;
+  color: #111;
+  border: 1px solid #8885;
+  border-radius: 8px;
+  box-shadow: 0 6px 16px #0002;
+  overflow: hidden;
+  z-index: 10;
+  min-width: 12rem;
+}
+.trip-picker li + li {
+  border-top: 1px solid #8883;
+}
+.trip-picker li.muted {
+  padding: 0.5rem 0.75rem;
+}
+@media (prefers-color-scheme: dark) {
+  .trip-picker {
+    background: #1e1e1e;
+    color: #eee;
+  }
+}
+.added {
+  position: absolute;
+  top: calc(100% + 0.25rem);
+  right: 0;
+  font-size: 0.8rem;
+  color: #10b981;
 }
 
 /* ─── Vote buttons ───────────────────────────────────────────────────────── */

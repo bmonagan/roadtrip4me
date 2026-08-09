@@ -15,9 +15,14 @@ export default function TripsPage() {
 
   return (
     <div className="page">
-      <h1>My Trips</h1>
+      <div className="page-head">
+        <h1>My Trips</h1>
+        <Link to="/trips/new" className="btn primary">
+          + New Trip
+        </Link>
+      </div>
       {data && data.data.length === 0 ? (
-        <p className="muted">No trips yet.</p>
+        <p className="muted">No trips yet. Plan your first road trip!</p>
       ) : (
         <ul className="card-list">
           {(data?.data ?? []).map((trip) => (

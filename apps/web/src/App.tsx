@@ -1,6 +1,7 @@
 import { NavLink, Route, Routes } from 'react-router-dom';
 import TripsPage from './pages/TripsPage';
 import TripDetailPage from './pages/TripDetailPage';
+import TripFormPage from './pages/TripFormPage';
 import StopsPage from './pages/StopsPage';
 
 export default function App() {
@@ -19,7 +20,9 @@ export default function App() {
         <Routes>
           <Route path="/" element={<TripsPage />} />
           <Route path="/trips" element={<TripsPage />} />
+          <Route path="/trips/new" element={<TripFormPage />} />
           <Route path="/trips/:id" element={<TripDetailPage />} />
+          <Route path="/trips/:id/edit" element={<TripFormPage />} />
           <Route path="/stops" element={<StopsPage />} />
         </Routes>
       </main>
