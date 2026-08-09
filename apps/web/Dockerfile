@@ -1,0 +1,24 @@
+# Roadtrip4me web — serves the SPA and reverse-proxies /api to the API service
+# so the browser talks to a single origin (no CORS in production).
+# Build from the repo root: docker build -f apps/web/Dockerfile .
+
+FROM oven/bun:1 AS build
+WORKDIR /app
+COPY . .
+
+ARG VITE_MAPBOX_TOKEN
+ARG VITE_AUTH0_DOMAIN
+ARG VITE_AUTH0_CLIENT_ID
+ARG VITE_AUTH0_AUDIENCE
+ENV VITE_MAPBOX_TOKEN=${VITE_MAPBOX_TOKEN} \
+    VITE_AUTH0_DOMAIN=${VITE_AUTH0_DOMAIN} \
+    VITE_AUTH0_CLIENT_ID=${VITE_AUTH0_CLIENT_ID} \
+    VITE_AUTH0_AUDIENCE=${VITE_AUTH0_AUDIENCE}
+
+RUN bun install --frozen-lockfile \
+  && bun run --cwd apps/web build
+
+FROM nginx:alpine
+COPY apps/web/nginx.conf /etc/nginx/conf.d/default.conf
+COPY --from=build /app/apps/web/dist /usr/share/nginx/html
+EXPOSE 80

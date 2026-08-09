@@ -1,0 +1,11 @@
+node_modules
+dist
+.git
+*.log
+.env
+.env.*
+notes
+coverage
+apps/api/src/generated
+apps/web/dist
+apps/api/dist

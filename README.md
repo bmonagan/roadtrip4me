@@ -83,16 +83,44 @@ curl http://localhost:3000/api/v1/health
 ```bash
 bun run build       # Build all apps
 bun run typecheck   # Type check all packages
+bun run lint        # Lint both apps (ESLint)
+bun run test        # Run unit tests (Vitest)
 bun run format      # Format with Prettier
+bun run start       # Run the built API (apps/api/dist/main.js)
+bun run preview     # Serve the built web on port 5173
 ```
+
+## Production deployment
+
+The stack deploys as three containers behind one origin (nginx serves the SPA
+and reverse-proxies `/api` to the API — no CORS exposure):
+
+```bash
+cp .env.prod.example .env.prod    # fill in real values
+docker compose -f docker-compose.prod.yml up -d --build
+```
+
+The API container applies migrations (`prisma migrate deploy`) on boot, then
+starts the compiled bundle. The web container bakes `VITE_MAPBOX_TOKEN` and the
+Auth0 config into the static build.
+
+**Production checklist:**
+
+- Set `AUTH_DISABLED=false` and configure `AUTH0_DOMAIN`/`AUTH0_AUDIENCE` (see
+  `SECURITY.md`) — never leave the dev `x-user-id` fallback enabled in prod.
+- Provision a real Postgres (PostGIS) + Redis, or attach volumes for the
+  compose services; take regular backups of `postgres_data`.
+- Point a domain at the web container and terminate TLS (Caddy/Let's Encrypt or
+  a load balancer) in front of it.
+- Keep API keys in a secret manager / `.env.prod`; never commit them.
 
 ## External APIs required
 
 | Service | Purpose | Link |
 |---|---|---|
-| Google Maps | Routing + Places | [console.cloud.google.com](https://console.cloud.google.com) |
-| Mapbox | Map display | [mapbox.com](https://mapbox.com) |
+| Google Maps (Routes) | Driving routes + polylines | [console.cloud.google.com](https://console.cloud.google.com) |
+| Google Maps (Places) | Verify AI stop coordinates | [console.cloud.google.com](https://console.cloud.google.com) |
+| Mapbox | Map display + geocoding | [mapbox.com](https://mapbox.com) |
 | DeepSeek | Stop recommendations | [platform.deepseek.com](https://platform.deepseek.com) |
-| Yelp Fusion | Restaurant/activity data | [yelp.com/developers](https://www.yelp.com/developers) |
 | Auth0 | Authentication | [auth0.com](https://auth0.com) |
 | Booking.com | Hotel affiliate | [booking.com/affiliate](https://www.booking.com/affiliate) |
