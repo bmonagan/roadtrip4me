@@ -1,4 +1,5 @@
 import { BadGatewayException, Injectable, NotFoundException } from '@nestjs/common';
+import { decode } from '@googlemaps/polyline-codec';
 import type { StopCategory, StopRecommendation } from '@roadtrip4me/types';
 import type { Trip as TripModel } from '../generated/prisma/client';
 import { distanceToRouteMeters, type GeoPoint } from '../common/geo';
@@ -93,6 +94,19 @@ export class RecommendationsService {
   }
 
   private async buildRoute(trip: TripModel): Promise<GeoPoint[]> {
+    // Prefer the real driving route when available; fall back to the straight
+    // origin → waypoints → destination line for trips without routing data.
+    if (trip.encodedPolyline) {
+      try {
+        const points = decode(trip.encodedPolyline);
+        if (points.length >= 2) {
+          return points.map(([lat, lng]) => ({ lat, lng }));
+        }
+      } catch {
+        // malformed polyline — fall through to the straight-line route
+      }
+    }
+
     const waypoints = await this.prisma.tripWaypoint.findMany({
       where: { tripId: trip.id },
       orderBy: { order: 'asc' },
