@@ -1,6 +1,7 @@
 import { Body, Controller, Get, NotFoundException, Param, Post } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
+import { Throttle } from '@nestjs/throttler';
 import { CurrentUserId } from '../auth/current-user.decorator';
 import { PrismaService } from '../prisma/prisma.service';
 import { RecommendationRequestDto } from './dto/recommendation-request.dto';
@@ -11,6 +12,7 @@ type RecommendationStatus =
   | { status: 'failed'; message?: string }
   | { status: 'completed'; data: unknown };
 
+@Throttle({ default: { limit: 10, ttl: 60_000 } })
 @Controller('trips')
 export class RecommendationsController {
   constructor(

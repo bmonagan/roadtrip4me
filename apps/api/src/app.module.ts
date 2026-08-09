@@ -24,7 +24,7 @@ import { redisConnection } from './jobs/redis.config';
     ThrottlerModule.forRoot([
       {
         ttl: 60_000,
-        limit: 100,
+        limit: 300,
       },
     ]),
     PrismaModule,
