@@ -16,6 +16,7 @@ import type { CreateTripDto } from './dto/create-trip.dto';
 import type { ListTripsQueryDto } from './dto/list-trips-query.dto';
 import type { PlaceDto } from './dto/create-trip.dto';
 import type { UpdateTripDto } from './dto/update-trip.dto';
+import type { AddWaypointDto } from './dto/add-waypoint.dto';
 
 type TripWithRelations = TripModel & {
   waypoints: TripWaypointModel[];
@@ -193,6 +194,56 @@ export class TripsService {
     return this.findOne(userId, tripId);
   }
 
+  async addWaypoint(userId: string, tripId: string, dto: AddWaypointDto): Promise<Trip> {
+    await this.ensureTripOwned(userId, tripId);
+
+    await this.prisma.$transaction(async (tx) => {
+      const last = await tx.tripWaypoint.findFirst({
+        where: { tripId },
+        orderBy: { order: 'desc' },
+        select: { order: true },
+      });
+      await tx.tripWaypoint.create({
+        data: {
+          tripId,
+          label: dto.label,
+          lat: dto.lat,
+          lng: dto.lng,
+          order: (last?.order ?? 0) + 1,
+        },
+      });
+    });
+
+    await this.enqueueRoute(tripId);
+    return this.findOne(userId, tripId);
+  }
+
+  async removeWaypoint(userId: string, tripId: string, waypointId: string): Promise<Trip> {
+    await this.ensureTripOwned(userId, tripId);
+
+    const deleted = await this.prisma.$transaction(async (tx) => {
+      const result = await tx.tripWaypoint.deleteMany({ where: { id: waypointId, tripId } });
+      if (result.count > 0) {
+        const remaining = await tx.tripWaypoint.findMany({
+          where: { tripId },
+          orderBy: { order: 'asc' },
+          select: { id: true },
+        });
+        for (const [index, wp] of remaining.entries()) {
+          await tx.tripWaypoint.update({ where: { id: wp.id }, data: { order: index + 1 } });
+        }
+      }
+      return result;
+    });
+
+    if (deleted.count === 0) {
+      throw new NotFoundException('Waypoint not found');
+    }
+
+    await this.enqueueRoute(tripId);
+    return this.findOne(userId, tripId);
+  }
+
   // Enqueues a route computation for the trip. jobId is the trip id, so
   // concurrent enqueues (e.g. every lazy read) collapse into a single job; a
   // fresh job is created after a change or once the previous one completes.
@@ -280,6 +331,7 @@ function toTrip(trip: TripWithRelations): Trip {
     origin: { label: trip.originLabel, lat: trip.originLat, lng: trip.originLng },
     destination: { label: trip.destLabel, lat: trip.destLat, lng: trip.destLng },
     waypoints: trip.waypoints.map((w) => ({
+      id: w.id,
       order: w.order,
       coordinates: { lat: w.lat, lng: w.lng },
       label: w.label,

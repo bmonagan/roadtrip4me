@@ -23,10 +23,11 @@ type NearbyStop = Stop & { distanceMeters: number };
 
 export default function StopsPage() {
   const [category, setCategory] = useState<string>('');
+  const [query, setQuery] = useState<string>('');
 
   const { data, isLoading, isError, error } = useQuery({
-    queryKey: ['stops', category],
-    queryFn: () => api.stops.list({ pageSize: 50, category }),
+    queryKey: ['stops', category, query],
+    queryFn: () => api.stops.list({ pageSize: 50, category, q: query }),
   });
 
   return (
@@ -44,6 +45,13 @@ export default function StopsPage() {
             ))}
           </select>
         </label>
+        <input
+          type="search"
+          className="stop-search"
+          placeholder="Search stops, city, state…"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+        />
       </div>
 
       <NearbyStops />

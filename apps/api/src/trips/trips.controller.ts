@@ -2,6 +2,7 @@ import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestj
 import { CurrentUserId } from '../auth/current-user.decorator';
 import { TripsService } from './trips.service';
 import { AddStopDto } from './dto/add-stop.dto';
+import { AddWaypointDto } from './dto/add-waypoint.dto';
 import { CreateTripDto } from './dto/create-trip.dto';
 import { ListTripsQueryDto } from './dto/list-trips-query.dto';
 import { UpdateTripDto } from './dto/update-trip.dto';
@@ -39,9 +40,27 @@ export class TripsController {
   removeStop(
     @CurrentUserId() userId: string,
     @Param('id') id: string,
-    @Param('stopId') stopId: string
+    @Param('stopId') stopId: string,
   ) {
     return this.tripsService.removeStop(userId, id, stopId);
+  }
+
+  @Post(':id/waypoints')
+  addWaypoint(
+    @CurrentUserId() userId: string,
+    @Param('id') id: string,
+    @Body() dto: AddWaypointDto,
+  ) {
+    return this.tripsService.addWaypoint(userId, id, dto);
+  }
+
+  @Delete(':id/waypoints/:waypointId')
+  removeWaypoint(
+    @CurrentUserId() userId: string,
+    @Param('id') id: string,
+    @Param('waypointId') waypointId: string,
+  ) {
+    return this.tripsService.removeWaypoint(userId, id, waypointId);
   }
 
   @Delete(':id')

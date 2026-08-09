@@ -203,6 +203,34 @@ body {
 .toolbar select {
   margin-left: 0.35rem;
 }
+.stop-search {
+  margin-left: 1rem;
+  padding: 0.4rem 0.75rem;
+  border-radius: 8px;
+  border: 1px solid #8885;
+  background: #00000006;
+  font: inherit;
+  width: 18rem;
+}
+@media (max-width: 40rem) {
+  .stop-search {
+    margin-left: 0;
+    margin-top: 0.5rem;
+    width: 100%;
+  }
+}
+
+.waypoint-add {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+  max-width: 30rem;
+}
+.waypoint-add .btn {
+  flex-shrink: 0;
+  padding: 0.55rem 1rem;
+}
 
 .nearby {
   margin-bottom: 2rem;

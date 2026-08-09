@@ -74,10 +74,11 @@ export type TripStatus = 'draft' | 'planned' | 'in_progress' | 'completed';
 export type TripVibe = 'scenic' | 'foodie' | 'adventure' | 'historic' | 'relaxed' | 'family';
 
 export interface TripWaypoint {
+  id: string;
   order: number;
   coordinates: Coordinates;
   label: string;
-  stopId: string | null; // null = user-defined waypoint, not a Stop record
+  stopId: string | null;  // null = user-defined waypoint, not a Stop record
 }
 
 export interface Trip {

@@ -66,6 +66,7 @@ export interface ListStopsParams {
   pageSize?: number;
   category?: string;
   city?: string;
+  q?: string;
 }
 
 export interface NearbyStopsParams {
@@ -144,6 +145,10 @@ export const api = {
       request<Trip>(`/trips/${id}/stops`, { method: 'POST', body: JSON.stringify({ stopId }) }),
     removeStop: (id: string, stopId: string) =>
       request<Trip>(`/trips/${id}/stops/${stopId}`, { method: 'DELETE' }),
+    addWaypoint: (id: string, input: TripPlace) =>
+      request<Trip>(`/trips/${id}/waypoints`, { method: 'POST', body: JSON.stringify(input) }),
+    removeWaypoint: (id: string, waypointId: string) =>
+      request<Trip>(`/trips/${id}/waypoints/${waypointId}`, { method: 'DELETE' }),
     recommendations: {
       enqueue: (id: string, input: RecommendationInput) =>
         request<{ jobId: string; status: string }>(`/trips/${id}/recommendations`, {

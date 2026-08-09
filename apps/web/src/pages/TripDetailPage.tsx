@@ -1,10 +1,12 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { api } from '../lib/api';
+import type { Trip } from '@roadtrip4me/types';
+import { api, type TripPlace } from '../lib/api';
 import { formatDate, formatDuration, titleCase } from '../lib/format';
 import TripMap from '../components/TripMap';
 import Recommendations from '../components/Recommendations';
+import PlaceSearch from '../components/PlaceSearch';
 
 const ROUTE_POLL_MS = 1500;
 const ROUTE_POLL_MAX = 20;
@@ -42,6 +44,20 @@ export default function TripDetailPage() {
 
   const removeStop = useMutation({
     mutationFn: (stopId: string) => api.trips.removeStop(id!, stopId),
+    onSuccess: (updated) => {
+      queryClient.setQueryData(['trip', id], updated);
+    },
+  });
+
+  const addWaypoint = useMutation({
+    mutationFn: (place: TripPlace) => api.trips.addWaypoint(id!, place),
+    onSuccess: (updated) => {
+      queryClient.setQueryData(['trip', id], updated);
+    },
+  });
+
+  const removeWaypoint = useMutation({
+    mutationFn: (waypointId: string) => api.trips.removeWaypoint(id!, waypointId),
     onSuccess: (updated) => {
       queryClient.setQueryData(['trip', id], updated);
     },
@@ -103,6 +119,12 @@ export default function TripDetailPage() {
 
       <TripMap trip={trip} />
 
+      <WaypointsSection
+        trip={trip}
+        addWaypoint={addWaypoint}
+        removeWaypoint={removeWaypoint}
+      />
+
       <Recommendations trip={trip} />
 
       <section className="stops-section">
@@ -139,5 +161,62 @@ export default function TripDetailPage() {
         )}
       </section>
     </div>
+  );
+}
+
+function WaypointsSection({
+  trip,
+  addWaypoint,
+  removeWaypoint,
+}: {
+  trip: Trip;
+  addWaypoint: { mutate: (place: TripPlace) => void; isPending?: boolean };
+  removeWaypoint: { mutate: (id: string) => void; isPending?: boolean };
+}) {
+  const [place, setPlace] = useState<TripPlace | null>(null);
+
+  const handleAdd = () => {
+    if (!place) return;
+    addWaypoint.mutate(place);
+    setPlace(null);
+  };
+
+  return (
+    <section className="stops-section">
+      <h2>Waypoints ({trip.waypoints.length})</h2>
+      <div className="waypoint-add">
+        <PlaceSearch label="Add a waypoint" value={place} onSelect={setPlace} />
+        <button
+          type="button"
+          className="btn primary"
+          onClick={handleAdd}
+          disabled={!place || addWaypoint.isPending}
+        >
+          Add
+        </button>
+      </div>
+      {trip.waypoints.length > 0 && (
+        <ol className="stop-list">
+          {trip.waypoints.map((wp) => (
+            <li key={wp.id} className="stop-item">
+              <div className="stop-item-body">
+                <span className="stop-order">{wp.label}</span>
+                <p className="muted">
+                  {wp.coordinates.lat.toFixed(3)}, {wp.coordinates.lng.toFixed(3)}
+                </p>
+              </div>
+              <button
+                type="button"
+                className="btn small"
+                onClick={() => removeWaypoint.mutate(wp.id)}
+                disabled={removeWaypoint.isPending}
+              >
+                Remove
+              </button>
+            </li>
+          ))}
+        </ol>
+      )}
+    </section>
   );
 }

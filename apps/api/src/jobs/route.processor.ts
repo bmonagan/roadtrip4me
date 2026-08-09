@@ -28,6 +28,7 @@ export class RouteProcessor extends WorkerHost {
     const trip = await this.prisma.trip.findUnique({
       where: { id: tripId },
       include: {
+        waypoints: { orderBy: { order: 'asc' } },
         tripStops: {
           orderBy: { order: 'asc' },
           include: { stop: true },
@@ -41,7 +42,10 @@ export class RouteProcessor extends WorkerHost {
     const route = await this.maps.getRoute(
       { lat: trip.originLat, lng: trip.originLng },
       { lat: trip.destLat, lng: trip.destLng },
-      trip.tripStops.map((ts) => ({ lat: ts.stop.lat, lng: ts.stop.lng }))
+      [
+        ...trip.tripStops.map((ts) => ({ lat: ts.stop.lat, lng: ts.stop.lng })),
+        ...trip.waypoints.map((w) => ({ lat: w.lat, lng: w.lng })),
+      ],
     );
 
     if (route) {

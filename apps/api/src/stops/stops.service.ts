@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import type { PaginatedResponse, Stop, StopWithUserVote } from '@roadtrip4me/types';
-import type { Stop as StopModel } from '../generated/prisma/client';
+import { Prisma, type Stop as StopModel } from '../generated/prisma/client';
 import { mapStop } from '../common/mappers/stop.mapper';
 import { PrismaService } from '../prisma/prisma.service';
 import type { CreateStopDto } from './dto/create-stop.dto';
@@ -16,9 +16,16 @@ export class StopsService {
   constructor(private readonly prisma: PrismaService) {}
 
   async findAll(query: ListStopsQueryDto): Promise<PaginatedResponse<Stop>> {
-    const where = {
+    const where: Prisma.StopWhereInput = {
       ...(query.category !== undefined && { category: query.category }),
       ...(query.city !== undefined && { city: query.city }),
+      ...(query.q !== undefined && {
+        OR: [
+          { name: { contains: query.q, mode: 'insensitive' } },
+          { city: { contains: query.q, mode: 'insensitive' } },
+          { state: { contains: query.q, mode: 'insensitive' } },
+        ],
+      }),
     };
 
     const [total, stops] = await this.prisma.$transaction([
