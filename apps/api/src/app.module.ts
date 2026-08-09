@@ -3,6 +3,8 @@ import { ConfigModule } from '@nestjs/config';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { PrismaModule } from './prisma/prisma.module';
+import { TripsModule } from './trips/trips.module';
 
 @Module({
   imports: [
@@ -16,6 +18,8 @@ import { AppService } from './app.service';
         limit: 100,
       },
     ]),
+    PrismaModule,
+    TripsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
