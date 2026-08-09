@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { api } from '../lib/api';
 import { formatDate, formatDuration, titleCase } from '../lib/format';
 import TripMap from '../components/TripMap';
+import Recommendations from '../components/Recommendations';
 
 export default function TripDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -82,6 +83,8 @@ export default function TripDetailPage() {
       </header>
 
       <TripMap trip={trip} />
+
+      <Recommendations trip={trip} />
 
       <section className="stops-section">
         <h2>

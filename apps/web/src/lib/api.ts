@@ -1,6 +1,7 @@
 import type {
   PaginatedResponse,
   Stop,
+  StopRecommendation,
   StopWithUserVote,
   Trip,
   TripSummary,
@@ -92,6 +93,32 @@ export interface CreateTripInput {
 
 export type UpdateTripInput = Partial<CreateTripInput>;
 
+export interface CreateStopInput {
+  name: string;
+  description?: string;
+  category: Stop['category'];
+  coordinates: { lat: number; lng: number };
+  address: {
+    street?: string;
+    city: string;
+    state: string;
+    country?: string;
+    postalCode?: string;
+  };
+}
+
+export type RecommendedStop = StopRecommendation & { city: string; state: string };
+
+export interface RecommendationInput {
+  vibes?: Trip['vibes'];
+  maxDetourMinutes?: number;
+  preferences?: {
+    avoidHighways?: boolean;
+    preferNationalParks?: boolean;
+    foodPreferences?: string[];
+  };
+}
+
 export const api = {
   trips: {
     list: (params?: ListTripsParams) =>
@@ -106,6 +133,11 @@ export const api = {
       request<Trip>(`/trips/${id}/stops`, { method: 'POST', body: JSON.stringify({ stopId }) }),
     removeStop: (id: string, stopId: string) =>
       request<Trip>(`/trips/${id}/stops/${stopId}`, { method: 'DELETE' }),
+    recommendations: (id: string, input: RecommendationInput) =>
+      request<RecommendedStop[]>(`/trips/${id}/recommendations`, {
+        method: 'POST',
+        body: JSON.stringify(input),
+      }),
   },
   stops: {
     list: (params?: ListStopsParams) =>
@@ -113,6 +145,8 @@ export const api = {
     nearby: (params: NearbyStopsParams) =>
       request<(Stop & { distanceMeters: number })[]>(`/stops/nearby${toQueryString(params)}`),
     get: (id: string) => request<StopWithUserVote>(`/stops/${id}`),
+    create: (input: CreateStopInput) =>
+      request<Stop>('/stops', { method: 'POST', body: JSON.stringify(input) }),
   },
   votes: {
     cast: (stopId: string, value: 1 | -1) =>
