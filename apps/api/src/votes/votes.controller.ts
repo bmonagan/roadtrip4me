@@ -1,5 +1,5 @@
 import { Body, Controller, Delete, Param, Put } from '@nestjs/common';
-import { CurrentUserId } from '../common/decorators/current-user-id.decorator';
+import { CurrentUserId } from '../auth/current-user.decorator';
 import { VotesService } from './votes.service';
 import { CastVoteDto } from './dto/cast-vote.dto';
 

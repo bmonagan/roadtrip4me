@@ -5,6 +5,7 @@ import { BullModule } from '@nestjs/bullmq';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { PrismaModule } from './prisma/prisma.module';
+import { AuthModule } from './auth/auth.module';
 import { TripsModule } from './trips/trips.module';
 import { StopsModule } from './stops/stops.module';
 import { VotesModule } from './votes/votes.module';
@@ -27,6 +28,7 @@ import { redisConnection } from './jobs/redis.config';
       },
     ]),
     PrismaModule,
+    AuthModule,
     TripsModule,
     StopsModule,
     VotesModule,

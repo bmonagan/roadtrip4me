@@ -1,7 +1,7 @@
 import { Body, Controller, Get, NotFoundException, Param, Post } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
-import { CurrentUserId } from '../common/decorators/current-user-id.decorator';
+import { CurrentUserId } from '../auth/current-user.decorator';
 import { PrismaService } from '../prisma/prisma.service';
 import { RecommendationRequestDto } from './dto/recommendation-request.dto';
 

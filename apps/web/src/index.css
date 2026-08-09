@@ -44,6 +44,9 @@ body {
   display: flex;
   gap: 1rem;
 }
+.site-auth {
+  margin-left: auto;
+}
 .site-nav a {
   text-decoration: none;
   color: inherit;

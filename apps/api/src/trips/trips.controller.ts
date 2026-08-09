@@ -1,5 +1,5 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
-import { CurrentUserId } from '../common/decorators/current-user-id.decorator';
+import { CurrentUserId } from '../auth/current-user.decorator';
 import { TripsService } from './trips.service';
 import { AddStopDto } from './dto/add-stop.dto';
 import { CreateTripDto } from './dto/create-trip.dto';

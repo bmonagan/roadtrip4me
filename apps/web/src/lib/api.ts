@@ -6,9 +6,11 @@ import type {
   Trip,
   TripSummary,
 } from '@roadtrip4me/types';
+import { authStore } from '../auth/authStore';
 
-// TEMPORARY: no Auth0 yet, so every request is made as the seeded dev user.
-// Remove this once real authentication is wired up.
+// TEMPORARY dev fallback: when no Auth0 token is present (local dev with auth
+// disabled on the API), requests are made as the seeded dev user. Remove once
+// Auth0 is configured.
 const DEV_USER_ID = import.meta.env.VITE_DEV_USER_ID ?? 'user_alice';
 const API_BASE = `${import.meta.env.VITE_API_URL ?? ''}/api/v1`;
 
@@ -23,11 +25,14 @@ export class ApiError extends Error {
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const token = authStore.getToken();
   const res = await fetch(`${API_BASE}${path}`, {
     ...init,
     headers: {
       'Content-Type': 'application/json',
-      'x-user-id': DEV_USER_ID,
+      ...(token
+        ? { Authorization: `Bearer ${token}` }
+        : { 'x-user-id': DEV_USER_ID }),
       ...(init?.headers ?? {}),
     },
   });
