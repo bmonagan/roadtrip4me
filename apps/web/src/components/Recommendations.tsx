@@ -1,30 +1,70 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import type { Trip } from '@roadtrip4me/types';
 import { api, type RecommendedStop } from '../lib/api';
 import { formatDistance, titleCase } from '../lib/format';
 
+const POLL_INTERVAL_MS = 1500;
+
 export default function Recommendations({ trip }: { trip: Trip }) {
   const queryClient = useQueryClient();
   const [recs, setRecs] = useState<RecommendedStop[] | null>(null);
-  const [requesting, setRequesting] = useState(false);
+  const [phase, setPhase] = useState<'idle' | 'processing' | 'failed'>('idle');
   const [error, setError] = useState<string | null>(null);
   const [added, setAdded] = useState<Set<string>>(new Set());
 
-  const fetchRecs = async () => {
-    setRequesting(true);
+  // Poll the job until it completes or fails.
+  useEffect(() => {
+    if (phase !== 'processing') return;
+    let cancelled = false;
+    let attempts = 0;
+
+    const poll = async () => {
+      try {
+        const res = await api.trips.recommendations.status(trip.id);
+        if (cancelled) return;
+        if (res.status === 'completed') {
+          setRecs(res.data);
+          setPhase('idle');
+          return;
+        }
+        if (res.status === 'failed') {
+          setError(res.message ?? 'Recommendations failed');
+          setPhase('failed');
+          return;
+        }
+        if (res.status === 'processing' && attempts++ < 40) {
+          setTimeout(poll, POLL_INTERVAL_MS);
+        } else {
+          setPhase('idle');
+        }
+      } catch (e) {
+        if (!cancelled) {
+          setError((e as Error).message);
+          setPhase('failed');
+        }
+      }
+    };
+
+    poll();
+    return () => {
+      cancelled = true;
+    };
+  }, [phase, trip.id]);
+
+  const start = async () => {
     setError(null);
+    setRecs(null);
+    setPhase('processing');
     try {
-      const results = await api.trips.recommendations(trip.id, {
+      await api.trips.recommendations.enqueue(trip.id, {
         vibes: trip.vibes,
         maxDetourMinutes: 30,
         preferences: {},
       });
-      setRecs(results);
     } catch (e) {
       setError((e as Error).message);
-    } finally {
-      setRequesting(false);
+      setPhase('failed');
     }
   };
 
@@ -51,8 +91,13 @@ export default function Recommendations({ trip }: { trip: Trip }) {
     <section className="recommendations">
       <div className="recommendations-head">
         <h2>AI Recommendations</h2>
-        <button type="button" className="btn small" onClick={fetchRecs} disabled={requesting}>
-          {requesting ? 'Thinking…' : recs ? 'Refresh' : 'Get recommendations'}
+        <button
+          type="button"
+          className="btn small"
+          onClick={start}
+          disabled={phase === 'processing'}
+        >
+          {phase === 'processing' ? 'Thinking…' : recs ? 'Refresh' : 'Get recommendations'}
         </button>
       </div>
       <p className="muted">
@@ -61,10 +106,9 @@ export default function Recommendations({ trip }: { trip: Trip }) {
       </p>
 
       {error && <p className="error">{error}</p>}
+      {phase === 'processing' && <p className="muted">Asking the AI…</p>}
 
-      {requesting && <p className="muted">Asking the AI…</p>}
-
-      {recs && !requesting && (
+      {recs && (
         <ul className="rec-list">
           {recs.map((rec, i) => (
             <li key={`${rec.name}-${i}`} className="card rec-card">

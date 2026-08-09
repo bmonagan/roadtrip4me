@@ -1,9 +1,13 @@
+import { useEffect, useRef } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { api } from '../lib/api';
 import { formatDate, formatDuration, titleCase } from '../lib/format';
 import TripMap from '../components/TripMap';
 import Recommendations from '../components/Recommendations';
+
+const ROUTE_POLL_MS = 1500;
+const ROUTE_POLL_MAX = 20;
 
 export default function TripDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -20,6 +24,20 @@ export default function TripDetailPage() {
     queryFn: () => api.trips.get(id!),
     enabled: !!id,
   });
+
+  // Route computation is async (BullMQ) — refetch until the polyline appears.
+  const routePollAttempts = useRef(0);
+  useEffect(() => {
+    if (!id || !trip || trip.encodedPolyline) return;
+    const interval = setInterval(() => {
+      if (routePollAttempts.current++ >= ROUTE_POLL_MAX) {
+        clearInterval(interval);
+        return;
+      }
+      queryClient.invalidateQueries({ queryKey: ['trip', id] });
+    }, ROUTE_POLL_MS);
+    return () => clearInterval(interval);
+  }, [id, trip?.encodedPolyline, queryClient]);
 
   const removeStop = useMutation({
     mutationFn: (stopId: string) => api.trips.removeStop(id!, stopId),

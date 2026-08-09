@@ -109,6 +109,12 @@ export interface CreateStopInput {
 
 export type RecommendedStop = StopRecommendation & { city: string; state: string };
 
+export type RecommendationsStatus =
+  | { status: 'idle' }
+  | { status: 'processing' }
+  | { status: 'failed'; message?: string }
+  | { status: 'completed'; data: RecommendedStop[] };
+
 export interface RecommendationInput {
   vibes?: Trip['vibes'];
   maxDetourMinutes?: number;
@@ -133,11 +139,14 @@ export const api = {
       request<Trip>(`/trips/${id}/stops`, { method: 'POST', body: JSON.stringify({ stopId }) }),
     removeStop: (id: string, stopId: string) =>
       request<Trip>(`/trips/${id}/stops/${stopId}`, { method: 'DELETE' }),
-    recommendations: (id: string, input: RecommendationInput) =>
-      request<RecommendedStop[]>(`/trips/${id}/recommendations`, {
-        method: 'POST',
-        body: JSON.stringify(input),
-      }),
+    recommendations: {
+      enqueue: (id: string, input: RecommendationInput) =>
+        request<{ jobId: string; status: string }>(`/trips/${id}/recommendations`, {
+          method: 'POST',
+          body: JSON.stringify(input),
+        }),
+      status: (id: string) => request<RecommendationsStatus>(`/trips/${id}/recommendations`),
+    },
   },
   stops: {
     list: (params?: ListStopsParams) =>
