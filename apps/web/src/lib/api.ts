@@ -74,11 +74,38 @@ export interface ListTripsParams {
   pageSize?: number;
 }
 
+export interface TripPlace {
+  label: string;
+  lat: number;
+  lng: number;
+}
+
+export interface CreateTripInput {
+  title: string;
+  origin: TripPlace;
+  destination: TripPlace;
+  status?: Trip['status'];
+  vibes?: Trip['vibes'];
+  startDate?: string | null;
+  endDate?: string | null;
+}
+
+export type UpdateTripInput = Partial<CreateTripInput>;
+
 export const api = {
   trips: {
     list: (params?: ListTripsParams) =>
       request<PaginatedResponse<TripSummary>>(`/trips${toQueryString(params)}`),
     get: (id: string) => request<Trip>(`/trips/${id}`),
+    create: (input: CreateTripInput) =>
+      request<Trip>('/trips', { method: 'POST', body: JSON.stringify(input) }),
+    update: (id: string, input: UpdateTripInput) =>
+      request<Trip>(`/trips/${id}`, { method: 'PATCH', body: JSON.stringify(input) }),
+    remove: (id: string) => request<void>(`/trips/${id}`, { method: 'DELETE' }),
+    addStop: (id: string, stopId: string) =>
+      request<Trip>(`/trips/${id}/stops`, { method: 'POST', body: JSON.stringify({ stopId }) }),
+    removeStop: (id: string, stopId: string) =>
+      request<Trip>(`/trips/${id}/stops/${stopId}`, { method: 'DELETE' }),
   },
   stops: {
     list: (params?: ListStopsParams) =>
