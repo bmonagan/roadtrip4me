@@ -97,27 +97,6 @@ CREATE INDEX "trips_userId_createdAt_idx" ON "trips" ("userId", "createdAt" DESC
 CREATE INDEX "trips_originPoint_idx"      ON "trips" USING GIST ("originPoint");
 CREATE INDEX "trips_destPoint_idx"        ON "trips" USING GIST ("destPoint");
 
--- ─── Trip Waypoints ───────────────────────────────────────────────────────────
-
-CREATE TABLE "trip_waypoints" (
-  "id"     TEXT    NOT NULL DEFAULT gen_random_uuid()::text,
-  "tripId" TEXT    NOT NULL,
-  "order"  INTEGER NOT NULL,
-  "label"  TEXT    NOT NULL,
-  "lat"    DOUBLE PRECISION NOT NULL,
-  "lng"    DOUBLE PRECISION NOT NULL,
-  "stopId" TEXT,
-
-  CONSTRAINT "trip_waypoints_pkey"          PRIMARY KEY ("id"),
-  CONSTRAINT "trip_waypoints_tripId_fkey"   FOREIGN KEY ("tripId")
-    REFERENCES "trips" ("id") ON DELETE CASCADE,
-  CONSTRAINT "trip_waypoints_stopId_fkey"   FOREIGN KEY ("stopId")
-    REFERENCES "stops" ("id") ON DELETE SET NULL,  -- stops table created below
-  CONSTRAINT "trip_waypoints_tripId_order_key" UNIQUE ("tripId", "order")
-);
-
-CREATE INDEX "trip_waypoints_tripId_idx" ON "trip_waypoints" ("tripId");
-
 -- ─── Stops ───────────────────────────────────────────────────────────────────
 
 CREATE TABLE "stops" (
@@ -163,6 +142,27 @@ CREATE INDEX "stops_location_idx"       ON "stops" USING GIST ("location");
 CREATE INDEX "stops_category_idx"       ON "stops" ("category");
 CREATE INDEX "stops_score_idx"          ON "stops" ("score" DESC);
 CREATE INDEX "stops_city_state_idx"     ON "stops" ("city", "state");
+
+-- ─── Trip Waypoints ───────────────────────────────────────────────────────────
+
+CREATE TABLE "trip_waypoints" (
+  "id"     TEXT    NOT NULL DEFAULT gen_random_uuid()::text,
+  "tripId" TEXT    NOT NULL,
+  "order"  INTEGER NOT NULL,
+  "label"  TEXT    NOT NULL,
+  "lat"    DOUBLE PRECISION NOT NULL,
+  "lng"    DOUBLE PRECISION NOT NULL,
+  "stopId" TEXT,
+
+  CONSTRAINT "trip_waypoints_pkey"          PRIMARY KEY ("id"),
+  CONSTRAINT "trip_waypoints_tripId_fkey"   FOREIGN KEY ("tripId")
+    REFERENCES "trips" ("id") ON DELETE CASCADE,
+  CONSTRAINT "trip_waypoints_stopId_fkey"   FOREIGN KEY ("stopId")
+    REFERENCES "stops" ("id") ON DELETE SET NULL,
+  CONSTRAINT "trip_waypoints_tripId_order_key" UNIQUE ("tripId", "order")
+);
+
+CREATE INDEX "trip_waypoints_tripId_idx" ON "trip_waypoints" ("tripId");
 
 -- ─── Trip Stops ───────────────────────────────────────────────────────────────
 
