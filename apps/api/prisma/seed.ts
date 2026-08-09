@@ -13,6 +13,15 @@ const prisma = new PrismaClient({
 async function main() {
   console.log('🌱 Seeding database...');
 
+  // Reset domain data so the seed is idempotent (safe to re-run). Deleted in
+  // FK order; users are upserted below so they persist between runs.
+  await prisma.tripWaypoint.deleteMany();
+  await prisma.tripStop.deleteMany();
+  await prisma.vote.deleteMany();
+  await prisma.savedStop.deleteMany();
+  await prisma.trip.deleteMany();
+  await prisma.stop.deleteMany();
+
   // ── Users ──────────────────────────────────────────────────────────────────
   const alice = await prisma.user.upsert({
     where: { email: 'alice@example.com' },
