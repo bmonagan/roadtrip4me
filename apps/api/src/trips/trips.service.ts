@@ -1,4 +1,6 @@
-import { ConflictException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { InjectQueue } from '@nestjs/bullmq';
+import { Queue } from 'bullmq';
 import type { PaginatedResponse, Trip, TripSummary } from '@roadtrip4me/types';
 import type {
   Stop as StopModel,
@@ -9,7 +11,7 @@ import type {
 } from '../generated/prisma/client';
 import { mapStop } from '../common/mappers/stop.mapper';
 import { PrismaService } from '../prisma/prisma.service';
-import { GoogleMapsService, type RouteResult } from '../maps/google-maps.service';
+import type { ComputeRouteJobData } from '../jobs/route.processor';
 import type { CreateTripDto } from './dto/create-trip.dto';
 import type { ListTripsQueryDto } from './dto/list-trips-query.dto';
 import type { PlaceDto } from './dto/create-trip.dto';
@@ -22,20 +24,12 @@ type TripWithRelations = TripModel & {
 
 @Injectable()
 export class TripsService {
-  private readonly logger = new Logger(TripsService.name);
-
   constructor(
     private readonly prisma: PrismaService,
-    private readonly maps: GoogleMapsService
+    @InjectQueue('route') private readonly routeQueue: Queue
   ) {}
 
   async create(userId: string, dto: CreateTripDto): Promise<Trip> {
-    const route = await this.fetchRoute(
-      { lat: dto.origin.lat, lng: dto.origin.lng },
-      { lat: dto.destination.lat, lng: dto.destination.lng },
-      []
-    );
-
     const trip = await this.prisma.trip.create({
       data: {
         userId,
@@ -46,11 +40,6 @@ export class TripsService {
         destLabel: dto.destination.label,
         destLat: dto.destination.lat,
         destLng: dto.destination.lng,
-        ...(route !== null && {
-          encodedPolyline: route.encodedPolyline,
-          totalDistanceMeters: route.distanceMeters,
-          totalDurationSeconds: route.durationSeconds,
-        }),
         ...(dto.status !== undefined && { status: dto.status }),
         ...(dto.vibes !== undefined && { vibes: dto.vibes }),
         ...(dto.startDate !== undefined && { startDate: new Date(dto.startDate) }),
@@ -59,6 +48,7 @@ export class TripsService {
     });
 
     await this.setGeographyPoints(trip.id, dto.origin, dto.destination);
+    await this.enqueueRoute(trip.id);
 
     return this.findOne(userId, trip.id);
   }
@@ -89,11 +79,10 @@ export class TripsService {
     const trip = await this.findOwnedTrip(userId, id);
 
     // Lazy-fill the route for trips created before routing existed (e.g. seed).
-    // Attempt at most once per request so a failed/unavailable route can't loop.
+    // Route computation is async now — enqueue it (deduped by jobId) and let
+    // the frontend refetch once the worker persists the result.
     if (!trip.encodedPolyline) {
-      await this.refreshRoute(trip);
-      const refreshed = await this.findOwnedTrip(userId, id);
-      return toTrip(refreshed);
+      await this.enqueueRoute(id);
     }
 
     return toTrip(trip);
@@ -135,9 +124,7 @@ export class TripsService {
         dto.destination ??
         ({ label: updated.destLabel, lat: updated.destLat, lng: updated.destLng } as PlaceDto);
       await this.setGeographyPoints(updated.id, origin, destination);
-
-      const refreshed = await this.findOwnedTrip(userId, id);
-      await this.refreshRoute(refreshed);
+      await this.enqueueRoute(id);
     }
 
     return this.findOne(userId, id);
@@ -175,7 +162,7 @@ export class TripsService {
       await tx.tripStop.create({ data: { tripId, stopId, order: (last?.order ?? 0) + 1 } });
     });
 
-    await this.refreshRoute(await this.findOwnedTrip(userId, tripId));
+    await this.enqueueRoute(tripId);
     return this.findOne(userId, tripId);
   }
 
@@ -202,44 +189,22 @@ export class TripsService {
       throw new NotFoundException('Stop not on this trip');
     }
 
-    await this.refreshRoute(await this.findOwnedTrip(userId, tripId));
+    await this.enqueueRoute(tripId);
     return this.findOne(userId, tripId);
   }
 
-  // Fetches a driving route that passes through the trip's ordered stops and
-  // persists the polyline + aggregates. Failures are logged, never thrown, so
-  // trip operations still succeed when routing is unavailable.
-  private async refreshRoute(trip: TripWithRelations): Promise<void> {
-    const intermediates = trip.tripStops.map((ts) => ({ lat: ts.stop.lat, lng: ts.stop.lng }));
-    const route = await this.fetchRoute(
-      { lat: trip.originLat, lng: trip.originLng },
-      { lat: trip.destLat, lng: trip.destLng },
-      intermediates
-    );
-
-    if (route !== null) {
-      await this.prisma.trip.update({
-        where: { id: trip.id },
-        data: {
-          encodedPolyline: route.encodedPolyline,
-          totalDistanceMeters: route.distanceMeters,
-          totalDurationSeconds: route.durationSeconds,
-        },
-      });
-    }
-  }
-
-  private async fetchRoute(
-    origin: { lat: number; lng: number },
-    destination: { lat: number; lng: number },
-    intermediates: { lat: number; lng: number }[]
-  ): Promise<RouteResult | null> {
-    try {
-      return await this.maps.getRoute(origin, destination, intermediates);
-    } catch (error) {
-      this.logger.warn(`Route computation failed: ${(error as Error).message}`);
-      return null;
-    }
+  // Enqueues a route computation for the trip. jobId is the trip id, so
+  // concurrent enqueues (e.g. every lazy read) collapse into a single job; a
+  // fresh job is created after a change or once the previous one completes.
+  private enqueueRoute(tripId: string): Promise<unknown> {
+    const data: ComputeRouteJobData = { tripId };
+    return this.routeQueue.add('compute-route', data, {
+      jobId: `route-${tripId}`,
+      attempts: 2,
+      backoff: { type: 'exponential', delay: 1000 },
+      removeOnComplete: true,
+      removeOnFail: { count: 100 },
+    });
   }
 
   // The geography columns are PostGIS-only and unsupported by Prisma, so they
