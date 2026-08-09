@@ -19,6 +19,7 @@
     "@types/bun": "latest",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.15.1",
+    "dotenv": "^16.4.5",
     "prettier": "^3.3.3",
     "prisma": "^7.8.0",
     "typescript": "^5.5.4"

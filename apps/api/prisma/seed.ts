@@ -1,11 +1,14 @@
 // prisma/seed.ts
-// Run with: bunx ts-node prisma/seed.ts
-// Or add to package.json: "prisma": { "seed": "bun run prisma/seed.ts" }
-// Then run: bunx prisma db seed
+// Run with: bunx prisma db seed  (from repo root)
 
-import { PrismaClient, StopCategory, TripStatus, TripVibe } from '@prisma/client';
+import { PrismaPg } from '@prisma/adapter-pg';
+import { PrismaClient, StopCategory, TripStatus, TripVibe } from '../src/generated/prisma/client';
 
-const prisma = new PrismaClient();
+const prisma = new PrismaClient({
+  adapter: new PrismaPg({
+    connectionString: process.env['DATABASE_URL'],
+  }),
+});
 
 async function main() {
   console.log('🌱 Seeding database...');
@@ -51,7 +54,8 @@ async function main() {
   }> = [
     {
       name: 'Cadillac Ranch',
-      description: 'Ten Cadillacs half-buried nose-first in a Texas field. Iconic Route 66 art installation.',
+      description:
+        'Ten Cadillacs half-buried nose-first in a Texas field. Iconic Route 66 art installation.',
       category: StopCategory.attraction,
       lat: 35.1872,
       lng: -101.9872,
@@ -62,7 +66,8 @@ async function main() {
     },
     {
       name: 'Petrified Forest National Park',
-      description: 'Ancient logs turned to colorful crystal over 225 million years. Stunning painted desert views.',
+      description:
+        'Ancient logs turned to colorful crystal over 225 million years. Stunning painted desert views.',
       category: StopCategory.park,
       lat: 34.9828,
       lng: -109.7877,
@@ -73,7 +78,8 @@ async function main() {
     },
     {
       name: 'Meramec Caverns',
-      description: 'Five-story cave system along the Meramec River. Jesse James reportedly hid here.',
+      description:
+        'Five-story cave system along the Meramec River. Jesse James reportedly hid here.',
       category: StopCategory.attraction,
       lat: 38.2167,
       lng: -91.1043,
@@ -83,7 +89,7 @@ async function main() {
       submittedByUserId: bob.id,
     },
     {
-      name: "Cozy Dog Drive In",
+      name: 'Cozy Dog Drive In',
       description: 'The original home of the corn dog on a stick. Route 66 institution since 1949.',
       category: StopCategory.restaurant,
       lat: 39.7859,
@@ -95,7 +101,8 @@ async function main() {
     },
     {
       name: 'Blue Hole',
-      description: 'Stunning 80-foot wide circular pool fed by a natural spring. Crystal clear turquoise water.',
+      description:
+        'Stunning 80-foot wide circular pool fed by a natural spring. Crystal clear turquoise water.',
       category: StopCategory.viewpoint,
       lat: 34.8706,
       lng: -104.6078,
@@ -122,11 +129,11 @@ async function main() {
 
   // ── Votes ──────────────────────────────────────────────────────────────────
   const voteData = [
-    { userId: alice.id, stopId: createdStops[0]!.id, value: 1 },   // alice upvotes Cadillac Ranch
-    { userId: bob.id,   stopId: createdStops[0]!.id, value: 1 },   // bob upvotes Cadillac Ranch
-    { userId: alice.id, stopId: createdStops[2]!.id, value: 1 },   // alice upvotes Meramec Caverns
-    { userId: bob.id,   stopId: createdStops[1]!.id, value: 1 },   // bob upvotes Petrified Forest
-    { userId: alice.id, stopId: createdStops[3]!.id, value: -1 },  // alice downvotes Cozy Dog
+    { userId: alice.id, stopId: createdStops[0]!.id, value: 1 }, // alice upvotes Cadillac Ranch
+    { userId: bob.id, stopId: createdStops[0]!.id, value: 1 }, // bob upvotes Cadillac Ranch
+    { userId: alice.id, stopId: createdStops[2]!.id, value: 1 }, // alice upvotes Meramec Caverns
+    { userId: bob.id, stopId: createdStops[1]!.id, value: 1 }, // bob upvotes Petrified Forest
+    { userId: alice.id, stopId: createdStops[3]!.id, value: -1 }, // alice downvotes Cozy Dog
   ];
 
   for (const vote of voteData) {

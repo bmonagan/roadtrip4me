@@ -20,6 +20,8 @@ apps/api/dist/
 # Docker
 *.pid
 
+# Prisma generated client
 /generated/prisma
+apps/api/src/generated/
 
 notes/
