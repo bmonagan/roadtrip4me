@@ -11,6 +11,8 @@ import { StopsModule } from './stops/stops.module';
 import { VotesModule } from './votes/votes.module';
 import { RecommendationsModule } from './recommendations/recommendations.module';
 import { UsersModule } from './users/users.module';
+import { AffiliateModule } from './affiliate/affiliate.module';
+import { BillingModule } from './billing/billing.module';
 import { redisConnection } from './jobs/redis.config';
 
 @Module({
@@ -35,6 +37,8 @@ import { redisConnection } from './jobs/redis.config';
     VotesModule,
     RecommendationsModule,
     UsersModule,
+    AffiliateModule,
+    BillingModule,
   ],
   controllers: [AppController],
   providers: [AppService],

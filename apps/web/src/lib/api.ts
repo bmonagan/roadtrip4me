@@ -1,4 +1,5 @@
 import type {
+  AffiliateCard,
   PaginatedResponse,
   Stop,
   StopRecommendation,
@@ -136,6 +137,9 @@ export const api = {
   users: {
     me: () => request<User>(`/users/me`),
   },
+  billing: {
+    checkout: () => request<{ url: string }>(`/billing/checkout`, { method: 'POST' }),
+  },
   trips: {
     list: (params?: ListTripsParams) =>
       request<PaginatedResponse<TripSummary>>(`/trips${toQueryString(params)}`),
@@ -160,6 +164,7 @@ export const api = {
       }),
     removeCollaborator: (id: string, collaboratorUserId: string) =>
       request<Trip>(`/trips/${id}/collaborators/${collaboratorUserId}`, { method: 'DELETE' }),
+    accommodations: (id: string) => request<AffiliateCard[]>(`/trips/${id}/accommodations`),
     recommendations: {
       enqueue: (id: string, input: RecommendationInput) =>
         request<{ jobId: string; status: string }>(`/trips/${id}/recommendations`, {

@@ -146,11 +146,11 @@ export interface RecommendationRequest {
 export interface AffiliateCard {
   provider: 'booking_com' | 'expedia';
   name: string;
-  imageUrl: string;
-  pricePerNight: number;
+  imageUrl: string | null;
+  pricePerNight: number | null;
   currency: string;
-  rating: number;
-  reviewCount: number;
+  rating: number | null;
+  reviewCount: number | null;
   affiliateUrl: string;
   coordinates: Coordinates;
 }

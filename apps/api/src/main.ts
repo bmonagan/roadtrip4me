@@ -43,7 +43,8 @@ async function bootstrap() {
       logger: true,
       trustProxy: true,
       genReqId: () => randomUUID(),
-    })
+    }),
+    { rawBody: true }
   );
 
   const fastify = app.getHttpAdapter().getInstance();

@@ -183,6 +183,10 @@ body {
   background: #8882;
   margin-right: 0.35rem;
 }
+.badge.premium {
+  background: #f59e0b22;
+  color: #f59e0b;
+}
 
 .stop-list {
   display: flex;
