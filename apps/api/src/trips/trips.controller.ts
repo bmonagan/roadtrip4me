@@ -3,6 +3,7 @@ import { CurrentUserId } from '../auth/current-user.decorator';
 import { TripsService } from './trips.service';
 import { AddStopDto } from './dto/add-stop.dto';
 import { AddWaypointDto } from './dto/add-waypoint.dto';
+import { AddCollaboratorDto } from './dto/add-collaborator.dto';
 import { CreateTripDto } from './dto/create-trip.dto';
 import { ListTripsQueryDto } from './dto/list-trips-query.dto';
 import { UpdateTripDto } from './dto/update-trip.dto';
@@ -61,6 +62,24 @@ export class TripsController {
     @Param('waypointId') waypointId: string,
   ) {
     return this.tripsService.removeWaypoint(userId, id, waypointId);
+  }
+
+  @Post(':id/collaborators')
+  addCollaborator(
+    @CurrentUserId() userId: string,
+    @Param('id') id: string,
+    @Body() dto: AddCollaboratorDto,
+  ) {
+    return this.tripsService.addCollaborator(userId, id, dto);
+  }
+
+  @Delete(':id/collaborators/:collaboratorUserId')
+  removeCollaborator(
+    @CurrentUserId() userId: string,
+    @Param('id') id: string,
+    @Param('collaboratorUserId') collaboratorUserId: string,
+  ) {
+    return this.tripsService.removeCollaborator(userId, id, collaboratorUserId);
   }
 
   @Delete(':id')

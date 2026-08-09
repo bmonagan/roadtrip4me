@@ -1,7 +1,12 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
-import type { PaginatedResponse, Trip, TripSummary } from '@roadtrip4me/types';
+import type {
+  PaginatedResponse,
+  Trip,
+  TripCollaborator,
+  TripSummary,
+} from '@roadtrip4me/types';
 import type {
   Stop as StopModel,
   Trip as TripModel,
@@ -17,10 +22,17 @@ import type { ListTripsQueryDto } from './dto/list-trips-query.dto';
 import type { PlaceDto } from './dto/create-trip.dto';
 import type { UpdateTripDto } from './dto/update-trip.dto';
 import type { AddWaypointDto } from './dto/add-waypoint.dto';
+import type { AddCollaboratorDto } from './dto/add-collaborator.dto';
+
+type CollaboratorWithUser = {
+  addedAt: Date;
+  user: { id: string; email: string; displayName: string };
+};
 
 type TripWithRelations = TripModel & {
   waypoints: TripWaypointModel[];
   tripStops: (TripStopModel & { stop: StopModel })[];
+  collaborators: CollaboratorWithUser[];
 };
 
 @Injectable()
@@ -55,7 +67,9 @@ export class TripsService {
   }
 
   async findAll(userId: string, query: ListTripsQueryDto): Promise<PaginatedResponse<TripSummary>> {
-    const where = { userId };
+    const where = {
+      OR: [{ userId }, { collaborators: { some: { userId } } }],
+    };
     const [total, trips] = await this.prisma.$transaction([
       this.prisma.trip.count({ where }),
       this.prisma.trip.findMany({
@@ -77,7 +91,7 @@ export class TripsService {
   }
 
   async findOne(userId: string, id: string): Promise<Trip> {
-    const trip = await this.findOwnedTrip(userId, id);
+    const trip = await this.findAccessibleTrip(userId, id);
 
     // Lazy-fill the route for trips created before routing existed (e.g. seed).
     // Route computation is async now — enqueue it (deduped by jobId) and let
@@ -90,7 +104,7 @@ export class TripsService {
   }
 
   async update(userId: string, id: string, dto: UpdateTripDto): Promise<Trip> {
-    await this.ensureTripOwned(userId, id);
+    await this.ensureTripAccess(userId, id);
 
     const updated = await this.prisma.trip.update({
       where: { id },
@@ -132,13 +146,13 @@ export class TripsService {
   }
 
   async remove(userId: string, id: string): Promise<{ deleted: true }> {
-    const trip = await this.findOwnedTrip(userId, id);
-    await this.prisma.trip.delete({ where: { id: trip.id } });
+    await this.ensureTripOwned(userId, id);
+    await this.prisma.trip.delete({ where: { id } });
     return { deleted: true };
   }
 
   async addStop(userId: string, tripId: string, stopId: string): Promise<Trip> {
-    await this.ensureTripOwned(userId, tripId);
+    await this.ensureTripAccess(userId, tripId);
 
     const stop = await this.prisma.stop.findUnique({ where: { id: stopId }, select: { id: true } });
     if (!stop) {
@@ -168,7 +182,7 @@ export class TripsService {
   }
 
   async removeStop(userId: string, tripId: string, stopId: string): Promise<Trip> {
-    await this.ensureTripOwned(userId, tripId);
+    await this.ensureTripAccess(userId, tripId);
 
     const deleted = await this.prisma.$transaction(async (tx) => {
       const result = await tx.tripStop.deleteMany({ where: { tripId, stopId } });
@@ -195,7 +209,7 @@ export class TripsService {
   }
 
   async addWaypoint(userId: string, tripId: string, dto: AddWaypointDto): Promise<Trip> {
-    await this.ensureTripOwned(userId, tripId);
+    await this.ensureTripAccess(userId, tripId);
 
     await this.prisma.$transaction(async (tx) => {
       const last = await tx.tripWaypoint.findFirst({
@@ -219,7 +233,7 @@ export class TripsService {
   }
 
   async removeWaypoint(userId: string, tripId: string, waypointId: string): Promise<Trip> {
-    await this.ensureTripOwned(userId, tripId);
+    await this.ensureTripAccess(userId, tripId);
 
     const deleted = await this.prisma.$transaction(async (tx) => {
       const result = await tx.tripWaypoint.deleteMany({ where: { id: waypointId, tripId } });
@@ -241,6 +255,39 @@ export class TripsService {
     }
 
     await this.enqueueRoute(tripId);
+    return this.findOne(userId, tripId);
+  }
+
+  async addCollaborator(userId: string, tripId: string, dto: AddCollaboratorDto): Promise<Trip> {
+    await this.ensureTripOwned(userId, tripId);
+
+    const user = await this.prisma.user.findUnique({
+      where: { email: dto.email.trim().toLowerCase() },
+      select: { id: true },
+    });
+    if (!user) {
+      throw new NotFoundException(`No account with email ${dto.email}`);
+    }
+    if (user.id === userId) {
+      throw new ConflictException('The trip owner is already a participant');
+    }
+
+    await this.prisma.tripCollaborator.upsert({
+      where: { tripId_userId: { tripId, userId: user.id } },
+      update: {},
+      create: { tripId, userId: user.id },
+    });
+
+    return this.findOne(userId, tripId);
+  }
+
+  async removeCollaborator(userId: string, tripId: string, collaboratorUserId: string): Promise<Trip> {
+    await this.ensureTripOwned(userId, tripId);
+
+    await this.prisma.tripCollaborator.deleteMany({
+      where: { tripId, userId: collaboratorUserId },
+    });
+
     return this.findOne(userId, tripId);
   }
 
@@ -279,14 +326,35 @@ export class TripsService {
     }
   }
 
-  private async findOwnedTrip(userId: string, id: string): Promise<TripWithRelations> {
+  private async ensureTripAccess(userId: string, tripId: string): Promise<void> {
     const trip = await this.prisma.trip.findFirst({
-      where: { id, userId },
+      where: {
+        id: tripId,
+        OR: [{ userId }, { collaborators: { some: { userId } } }],
+      },
+      select: { id: true },
+    });
+    if (!trip) {
+      throw new NotFoundException(`Trip ${tripId} not found`);
+    }
+  }
+
+  private async findAccessibleTrip(userId: string, id: string): Promise<TripWithRelations> {
+    const trip = await this.prisma.trip.findFirst({
+      where: {
+        id,
+        OR: [{ userId }, { collaborators: { some: { userId } } }],
+      },
       include: {
         waypoints: { orderBy: { order: 'asc' } },
         tripStops: {
           orderBy: { order: 'asc' },
           include: { stop: true },
+        },
+        collaborators: {
+          include: {
+            user: { select: { id: true, email: true, displayName: true } },
+          },
         },
       },
     });
@@ -338,6 +406,12 @@ function toTrip(trip: TripWithRelations): Trip {
       stopId: w.stopId,
     })),
     stops: trip.tripStops.map((ts) => mapStop(ts.stop)),
+    collaborators: trip.collaborators.map((c): TripCollaborator => ({
+      userId: c.user.id,
+      email: c.user.email,
+      displayName: c.user.displayName,
+      addedAt: c.addedAt.toISOString(),
+    })),
     startDate: trip.startDate?.toISOString() ?? null,
     endDate: trip.endDate?.toISOString() ?? null,
     totalDistanceMeters: trip.totalDistanceMeters,

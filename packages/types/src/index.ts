@@ -91,13 +91,21 @@ export interface Trip {
   destination: Coordinates & { label: string };
   waypoints: TripWaypoint[];
   stops: Stop[];
+  collaborators: TripCollaborator[];
   startDate: string | null;
   endDate: string | null;
   totalDistanceMeters: number | null;
   totalDurationSeconds: number | null;
-  encodedPolyline: string | null; // Encoded route polyline (google encoding)
+  encodedPolyline: string | null;  // Encoded route polyline (google encoding)
   createdAt: string;
   updatedAt: string;
+}
+
+export interface TripCollaborator {
+  userId: string;
+  email: string;
+  displayName: string;
+  addedAt: string;
 }
 
 export interface TripSummary {

@@ -7,6 +7,7 @@ import { formatDate, formatDuration, titleCase } from '../lib/format';
 import TripMap from '../components/TripMap';
 import Recommendations from '../components/Recommendations';
 import PlaceSearch from '../components/PlaceSearch';
+import ShareSection from '../components/ShareSection';
 
 const ROUTE_POLL_MS = 1500;
 const ROUTE_POLL_MAX = 20;
@@ -126,6 +127,8 @@ export default function TripDetailPage() {
       />
 
       <Recommendations trip={trip} />
+
+      <ShareSection trip={trip} />
 
       <section className="stops-section">
         <h2>

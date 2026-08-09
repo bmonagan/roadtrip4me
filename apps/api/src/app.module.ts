@@ -10,6 +10,7 @@ import { TripsModule } from './trips/trips.module';
 import { StopsModule } from './stops/stops.module';
 import { VotesModule } from './votes/votes.module';
 import { RecommendationsModule } from './recommendations/recommendations.module';
+import { UsersModule } from './users/users.module';
 import { redisConnection } from './jobs/redis.config';
 
 @Module({
@@ -33,6 +34,7 @@ import { redisConnection } from './jobs/redis.config';
     StopsModule,
     VotesModule,
     RecommendationsModule,
+    UsersModule,
   ],
   controllers: [AppController],
   providers: [AppService],

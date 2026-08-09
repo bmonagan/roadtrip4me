@@ -70,6 +70,7 @@ model User {
   votes           Vote[]
   submittedStops  Stop[]       @relation("SubmittedBy")
   savedStops      SavedStop[]
+  collaborations  TripCollaborator[]
 
   @@map("users")
 }
@@ -114,10 +115,30 @@ model Trip {
   user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   waypoints   TripWaypoint[]
   tripStops   TripStop[]
+  collaborators TripCollaborator[]
 
   // Most queries are "trips for this user, newest first"
   @@index([userId, createdAt(sort: Desc)])
   @@map("trips")
+}
+
+// ─── Trip Collaborator ───────────────────────────────────────────────────────
+// Users other than the owner who can view and edit a trip. The owner is not
+// stored here — ownership is Trip.userId. Editing is allowed for collaborators,
+// deleting and collaborator management are owner-only.
+
+model TripCollaborator {
+  id      String   @id @default(cuid())
+  tripId  String
+  userId  String
+  addedAt DateTime @default(now())
+
+  trip    Trip     @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([tripId, userId])
+  @@index([userId])
+  @@map("trip_collaborators")
 }
 
 // ─── Trip Waypoint ────────────────────────────────────────────────────────────

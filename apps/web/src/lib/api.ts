@@ -5,6 +5,7 @@ import type {
   StopWithUserVote,
   Trip,
   TripSummary,
+  User,
 } from '@roadtrip4me/types';
 import { authStore } from '../auth/authStore';
 
@@ -132,6 +133,9 @@ export interface RecommendationInput {
 }
 
 export const api = {
+  users: {
+    me: () => request<User>(`/users/me`),
+  },
   trips: {
     list: (params?: ListTripsParams) =>
       request<PaginatedResponse<TripSummary>>(`/trips${toQueryString(params)}`),
@@ -149,6 +153,13 @@ export const api = {
       request<Trip>(`/trips/${id}/waypoints`, { method: 'POST', body: JSON.stringify(input) }),
     removeWaypoint: (id: string, waypointId: string) =>
       request<Trip>(`/trips/${id}/waypoints/${waypointId}`, { method: 'DELETE' }),
+    addCollaborator: (id: string, email: string) =>
+      request<Trip>(`/trips/${id}/collaborators`, {
+        method: 'POST',
+        body: JSON.stringify({ email }),
+      }),
+    removeCollaborator: (id: string, collaboratorUserId: string) =>
+      request<Trip>(`/trips/${id}/collaborators/${collaboratorUserId}`, { method: 'DELETE' }),
     recommendations: {
       enqueue: (id: string, input: RecommendationInput) =>
         request<{ jobId: string; status: string }>(`/trips/${id}/recommendations`, {
