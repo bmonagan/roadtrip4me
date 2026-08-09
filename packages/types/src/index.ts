@@ -46,15 +46,15 @@ export interface Stop {
   address: Address;
   category: StopCategory;
   imageUrl: string | null;
-  externalId: string | null;  // Google Place ID, Yelp ID, etc.
-  score: number;              // Aggregated vote score
+  externalId: string | null; // Google Place ID, Yelp ID, etc.
+  score: number; // Aggregated vote score
   voteCount: number;
   submittedByUserId: string | null;
   createdAt: string;
 }
 
 export interface StopWithUserVote extends Stop {
-  userVote: 1 | -1 | null;  // Current user's vote, if authenticated
+  userVote: 1 | -1 | null; // Current user's vote, if authenticated
 }
 
 // ─── Vote ────────────────────────────────────────────────────────────────────
@@ -71,19 +71,13 @@ export interface Vote {
 
 export type TripStatus = 'draft' | 'planned' | 'in_progress' | 'completed';
 
-export type TripVibe =
-  | 'scenic'
-  | 'foodie'
-  | 'adventure'
-  | 'historic'
-  | 'relaxed'
-  | 'family';
+export type TripVibe = 'scenic' | 'foodie' | 'adventure' | 'historic' | 'relaxed' | 'family';
 
 export interface TripWaypoint {
   order: number;
   coordinates: Coordinates;
   label: string;
-  stopId: string | null;  // null = user-defined waypoint, not a Stop record
+  stopId: string | null; // null = user-defined waypoint, not a Stop record
 }
 
 export interface Trip {
@@ -100,6 +94,7 @@ export interface Trip {
   endDate: string | null;
   totalDistanceMeters: number | null;
   totalDurationSeconds: number | null;
+  encodedPolyline: string | null; // Encoded route polyline (google encoding)
   createdAt: string;
   updatedAt: string;
 }
@@ -122,7 +117,7 @@ export interface StopRecommendation {
   description: string;
   coordinates: Coordinates;
   category: StopCategory;
-  reasoning: string;  // Why AI recommended this stop
+  reasoning: string; // Why AI recommended this stop
   distanceFromRouteMeters: number;
 }
 
