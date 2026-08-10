@@ -1,0 +1,113 @@
+/* Roadtrip4me design tokens — "NomadPath Joyful Pop" (from Stitch) */
+/* DM Sans loaded in index.html */
+
+:root {
+  /* Brand colors */
+  --color-primary: #b5005e;
+  --color-on-primary: #ffffff;
+  --color-primary-container: #e20577;
+  --color-on-primary-container: #fffbff;
+  --color-inverse-primary: #ffb1c7;
+
+  --color-secondary: #006a62;
+  --color-on-secondary: #ffffff;
+  --color-secondary-container: #57fae9;
+  --color-on-secondary-container: #007168;
+
+  --color-tertiary: #705d00;
+  --color-tertiary-container: #caa900;
+  --color-on-tertiary-container: #4c3e00;
+
+  --color-error: #ba1a1a;
+  --color-error-container: #ffdad6;
+  --color-on-error-container: #93000a;
+
+  /* Surfaces */
+  --color-surface: #fcf9f8;
+  --color-surface-container-lowest: #ffffff;
+  --color-surface-container-low: #f6f3f2;
+  --color-surface-container: #f0eded;
+  --color-surface-container-high: #eae7e7;
+  --color-surface-container-highest: #e5e2e1;
+  --color-surface-dim: #dcd9d9;
+
+  /* Text & outline */
+  --color-on-surface: #1c1b1b;
+  --color-on-surface-variant: #5a3f47;
+  --color-outline: #8e6f77;
+  --color-outline-variant: #e2bdc6;
+
+  /* Typography (DM Sans) */
+  --font-family: 'DM Sans', system-ui, Avenir, Helvetica, Arial, sans-serif;
+  --font-display: 48px;
+  --font-headline-lg: 32px;
+  --font-headline-md: 24px;
+  --font-body-lg: 18px;
+  --font-body-md: 16px;
+  --font-label-bold: 14px;
+  --font-label-sm: 12px;
+
+  /* Radii */
+  --radius-sm: 0.5rem;
+  --radius-md: 1rem;
+  --radius-lg: 2rem;
+  --radius-xl: 3rem;
+  --radius-full: 9999px;
+
+  /* Spacing (8px base) */
+  --space-xs: 4px;
+  --space-base: 8px;
+  --space-sm: 12px;
+  --space-md: 24px;
+  --space-lg: 40px;
+  --space-xl: 64px;
+  --space-gutter: 20px;
+  --margin-mobile: 16px;
+  --margin-desktop: 80px;
+
+  /* Elevation — tinted soft shadows (no gray borders) */
+  --shadow-soft: 0px 20px 40px rgba(181, 0, 94, 0.08);
+  --shadow-float: 0px 24px 48px rgba(181, 0, 94, 0.14);
+
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-primary: #ffb1c7;
+    --color-on-primary: #5d0030;
+    --color-primary-container: #8e0048;
+    --color-on-primary-container: #ffd9e2;
+
+    --color-secondary: #2addcd;
+    --color-on-secondary: #003731;
+    --color-secondary-container: #005049;
+    --color-on-secondary-container: #57fae9;
+
+    --color-tertiary: #e8c426;
+    --color-tertiary-container: #554500;
+    --color-on-tertiary-container: #ffe173;
+
+    --color-error: #ffb4ab;
+    --color-error-container: #93000a;
+    --color-on-error-container: #ffdad6;
+
+    --color-surface: #16141a;
+    --color-surface-container-lowest: #1b1920;
+    --color-surface-container-low: #201d25;
+    --color-surface-container: #26222b;
+    --color-surface-container-high: #312c36;
+    --color-surface-container-highest: #3c3742;
+    --color-surface-dim: #100e13;
+
+    --color-on-surface: #f3f0ef;
+    --color-on-surface-variant: #d9c2c7;
+    --color-outline: #9c8289;
+    --color-outline-variant: #4d3a40;
+
+    --shadow-soft: 0px 20px 40px rgba(0, 0, 0, 0.45);
+    --shadow-float: 0px 24px 48px rgba(0, 0, 0, 0.55);
+
+    color-scheme: dark;
+  }
+}

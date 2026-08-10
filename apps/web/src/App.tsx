@@ -7,6 +7,7 @@ import TripsPage from './pages/TripsPage';
 import TripDetailPage from './pages/TripDetailPage';
 import TripFormPage from './pages/TripFormPage';
 import StopsPage from './pages/StopsPage';
+import HomePage from './pages/HomePage';
 import CallbackPage from './pages/CallbackPage';
 import LegalPage from './pages/LegalPage';
 import CookieConsent from './components/CookieConsent';
@@ -78,7 +79,7 @@ export default function App() {
       </header>
       <main className="site-main">
         <Routes>
-          <Route path="/" element={<TripsPage />} />
+          <Route path="/" element={<HomePage />} />
           <Route path="/trips" element={<TripsPage />} />
           <Route path="/trips/new" element={<TripFormPage />} />
           <Route path="/trips/:id" element={<TripDetailPage />} />
