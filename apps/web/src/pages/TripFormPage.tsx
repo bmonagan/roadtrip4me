@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import type { Trip, TripVibe } from '@roadtrip4me/types';
 import { api, type TripPlace } from '../lib/api';
 import PlaceSearch from '../components/PlaceSearch';
@@ -12,11 +12,23 @@ function toDateInputValue(iso: string | null): string {
   return iso ? iso.slice(0, 10) : '';
 }
 
+function placeFromParams(params: URLSearchParams, prefix: string): TripPlace | null {
+  const label = params.get(prefix);
+  const lat = params.get(`${prefix}Lat`);
+  const lng = params.get(`${prefix}Lng`);
+  if (!label || !lat || !lng) return null;
+  const latNum = Number(lat);
+  const lngNum = Number(lng);
+  if (!Number.isFinite(latNum) || !Number.isFinite(lngNum)) return null;
+  return { label, lat: latNum, lng: lngNum };
+}
+
 export default function TripFormPage() {
   const { id } = useParams<{ id: string }>();
   const isEdit = Boolean(id);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const [searchParams] = useSearchParams();
 
   const { data: trip, isLoading } = useQuery({
     queryKey: ['trip', id],
@@ -24,9 +36,14 @@ export default function TripFormPage() {
     enabled: isEdit,
   });
 
+  // Prefill origin/destination from the landing-page search (?from&to...).
   const [title, setTitle] = useState('');
-  const [origin, setOrigin] = useState<TripPlace | null>(null);
-  const [destination, setDestination] = useState<TripPlace | null>(null);
+  const [origin, setOrigin] = useState<TripPlace | null>(() =>
+    placeFromParams(searchParams, 'from')
+  );
+  const [destination, setDestination] = useState<TripPlace | null>(() =>
+    placeFromParams(searchParams, 'to')
+  );
   const [vibes, setVibes] = useState<TripVibe[]>([]);
   const [status, setStatus] = useState<Trip['status']>('draft');
   const [startDate, setStartDate] = useState('');
