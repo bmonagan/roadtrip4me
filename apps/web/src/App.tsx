@@ -77,19 +77,27 @@ export default function App() {
             ))}
         </div>
       </header>
-      <main className="site-main">
-        <Routes>
-          <Route path="/" element={<HomePage />} />
-          <Route path="/trips" element={<TripsPage />} />
-          <Route path="/trips/new" element={<TripFormPage />} />
-          <Route path="/trips/:id" element={<TripDetailPage />} />
-          <Route path="/trips/:id/edit" element={<TripFormPage />} />
-          <Route path="/stops" element={<StopsPage />} />
-          <Route path="/terms" element={<LegalPage kind="terms" />} />
-          <Route path="/privacy" element={<LegalPage kind="privacy" />} />
-          <Route path="/auth/callback" element={<CallbackPage />} />
-        </Routes>
-      </main>
+      <Routes>
+        {/* Full-bleed splash — not constrained by the app container. */}
+        <Route path="/" element={<HomePage />} />
+        <Route
+          path="*"
+          element={
+            <main className="site-main">
+              <Routes>
+                <Route path="/trips" element={<TripsPage />} />
+                <Route path="/trips/new" element={<TripFormPage />} />
+                <Route path="/trips/:id" element={<TripDetailPage />} />
+                <Route path="/trips/:id/edit" element={<TripFormPage />} />
+                <Route path="/stops" element={<StopsPage />} />
+                <Route path="/terms" element={<LegalPage kind="terms" />} />
+                <Route path="/privacy" element={<LegalPage kind="privacy" />} />
+                <Route path="/auth/callback" element={<CallbackPage />} />
+              </Routes>
+            </main>
+          }
+        />
+      </Routes>
       <footer className="site-footer">
         <Link to="/terms">Terms</Link>
         <Link to="/privacy">Privacy</Link>

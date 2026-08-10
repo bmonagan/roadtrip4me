@@ -719,21 +719,33 @@ button.primary:disabled {
 
 /* ─── Landing page ────────────────────────────────────────────────────────── */
 
+/* Full-bleed splash: fills the viewport between the header and footer, with
+   the hero background spanning edge to edge. */
 .landing-hero {
+  flex: 1;
+  display: flex;
+  align-items: center;
   background: linear-gradient(
     135deg,
     var(--color-surface) 0%,
     var(--color-primary-container) 0.01%,
     var(--color-surface) 60%
   );
+  padding: var(--space-lg) var(--margin-mobile);
+}
+@media (min-width: 40rem) {
+  .landing-hero {
+    padding: var(--space-lg) var(--margin-desktop);
+  }
 }
 .landing-hero-inner {
   display: grid;
   grid-template-columns: 1fr;
   gap: var(--space-lg);
   align-items: center;
-  min-height: 60vh;
-  padding: var(--space-lg) 0;
+  width: 100%;
+  max-width: 1440px;
+  margin: 0 auto;
 }
 @media (min-width: 40rem) {
   .landing-hero-inner {
