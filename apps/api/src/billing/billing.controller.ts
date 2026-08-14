@@ -1,4 +1,4 @@
-import { BadGatewayException, Controller, Headers, Post, Req } from '@nestjs/common';
+import { BadGatewayException, Controller, Get, Headers, Post, Req } from '@nestjs/common';
 import type { RawBodyRequest } from '@nestjs/common/interfaces';
 import Stripe from 'stripe';
 import { CurrentUser } from '../auth/current-user.decorator';
@@ -36,6 +36,46 @@ export class BillingController {
     return { url: session.url };
   }
 
+  @Get('status')
+  async status(@CurrentUser() user: UserModel): Promise<{
+    isPremium: boolean;
+    stripeCustomerId: string | null;
+  }> {
+    return {
+      isPremium: user.isPremium,
+      stripeCustomerId: user.stripeCustomerId,
+    };
+  }
+
+  @Post('cancel')
+  async cancel(@CurrentUser() user: UserModel): Promise<{ message: string }> {
+    if (!user.stripeCustomerId) {
+      throw new BadGatewayException('No Stripe customer found');
+    }
+
+    const secretKey = process.env['STRIPE_SECRET_KEY'];
+    if (!secretKey) {
+      throw new BadGatewayException('Stripe is not configured');
+    }
+
+    const subscriptions = await this.client(secretKey).subscriptions.list({
+      customer: user.stripeCustomerId,
+    });
+
+    if (subscriptions.length === 0) {
+      throw new BadGatewayException('No active subscription found');
+    }
+
+    await this.client(secretKey).subscriptions.cancel(subscriptions[0].id);
+
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: { isPremium: false },
+    });
+
+    return { message: 'Subscription cancelled successfully' };
+  }
+
   @Post('webhook')
   async webhook(
     @Req() req: RawBodyRequest<{ rawBody?: Buffer }>,
@@ -58,13 +98,39 @@ export class BillingController {
       throw new BadGatewayException(`Invalid Stripe webhook signature: ${(error as Error).message}`);
     }
 
-    if (event.type === 'checkout.session.completed') {
-      const session = event.data.object as Stripe.Checkout.Session;
-      if (session.client_reference_id) {
-        await this.prisma.user.update({
-          where: { id: session.client_reference_id },
-          data: { isPremium: true },
-        });
+    switch (event.type) {
+      case 'checkout.session.completed': {
+        const session = event.data.object as Stripe.Checkout.Session;
+        if (session.client_reference_id && session.customer) {
+          await this.prisma.user.update({
+            where: { id: session.client_reference_id },
+            data: {
+              isPremium: true,
+              stripeCustomerId: session.customer as string,
+            },
+          });
+        }
+        break;
+      }
+      case 'customer.subscription.updated': {
+        const subscription = event.data.object as Stripe.Subscription;
+        if (subscription.status === 'active' || subscription.status === 'trialing') {
+          await this.prisma.user.update({
+            where: { stripeCustomerId: subscription.customer as string },
+            data: { isPremium: true },
+          });
+        }
+        break;
+      }
+      case 'customer.subscription.deleted': {
+        const subscription = event.data.object as Stripe.Subscription;
+        if (subscription.status === 'canceled') {
+          await this.prisma.user.update({
+            where: { stripeCustomerId: subscription.customer as string },
+            data: { isPremium: false },
+          });
+        }
+        break;
       }
     }
 
