@@ -30,6 +30,7 @@ export default function App() {
   useEffect(() => {
     if (searchParams.get('upgraded')) {
       queryClient.invalidateQueries({ queryKey: ['me'] });
+      queryClient.invalidateQueries({ queryKey: ['billing/status'] });
       searchParams.delete('upgraded');
       window.history.replaceState({}, '', window.location.pathname);
     }

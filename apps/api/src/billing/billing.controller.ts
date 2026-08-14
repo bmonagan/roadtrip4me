@@ -2,6 +2,7 @@ import { BadGatewayException, Controller, Get, Headers, Post, Req } from '@nestj
 import type { RawBodyRequest } from '@nestjs/common/interfaces';
 import Stripe from 'stripe';
 import { CurrentUser } from '../auth/current-user.decorator';
+import { Public } from '../auth/public.decorator';
 import type { User as UserModel } from '../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -77,6 +78,7 @@ export class BillingController {
     return { message: 'Subscription cancelled successfully' };
   }
 
+  @Public()
   @Post('webhook')
   async webhook(
     @Req() req: RawBodyRequest<{ rawBody?: Buffer }>,
