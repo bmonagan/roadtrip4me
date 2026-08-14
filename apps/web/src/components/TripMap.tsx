@@ -68,16 +68,16 @@ export default function TripMap({ trip }: { trip: Trip }) {
 
       new mapboxgl.Marker({ color: '#10b981' })
         .setLngLat([trip.origin.lng, trip.origin.lat])
-        .setPopup(new mapboxgl.Popup().setText(`Start: ${trip.origin.label}`))
+        .setPopup(new mapboxgl.Popup({ anchor: 'center' }).setText(`Start: ${trip.origin.label}`))
         .addTo(map);
       new mapboxgl.Marker({ color: '#ef4444' })
         .setLngLat([trip.destination.lng, trip.destination.lat])
-        .setPopup(new mapboxgl.Popup().setText(`End: ${trip.destination.label}`))
+        .setPopup(new mapboxgl.Popup({ anchor: 'center' }).setText(`End: ${trip.destination.label}`))
         .addTo(map);
       trip.stops.forEach((stop) => {
         new mapboxgl.Marker({ color: '#f97316' })
           .setLngLat([stop.coordinates.lng, stop.coordinates.lat])
-          .setPopup(new mapboxgl.Popup().setText(stop.name))
+          .setPopup(new mapboxgl.Popup({ anchor: 'center' }).setText(stop.name))
           .addTo(map);
       });
 
