@@ -62,11 +62,12 @@ export class BillingController {
       customer: user.stripeCustomerId,
     });
 
-    if (subscriptions.length === 0) {
+    if (subscriptions.data.length === 0) {
       throw new BadGatewayException('No active subscription found');
     }
 
-    await this.client(secretKey).subscriptions.cancel(subscriptions[0].id);
+    const activeSub = subscriptions.data[0];
+    await this.client(secretKey).subscriptions.cancel(activeSub!.id);
 
     await this.prisma.user.update({
       where: { id: user.id },
