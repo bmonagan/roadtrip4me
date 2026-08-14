@@ -1,4 +1,4 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import type {
@@ -35,6 +35,9 @@ type TripWithRelations = TripModel & {
   collaborators: CollaboratorWithUser[];
 };
 
+const FREE_TRIP_LIMIT = 3;
+const FREE_STOP_LIMIT = 5;
+
 @Injectable()
 export class TripsService {
   constructor(
@@ -42,7 +45,14 @@ export class TripsService {
     @InjectQueue('route') private readonly routeQueue: Queue
   ) {}
 
-  async create(userId: string, dto: CreateTripDto): Promise<Trip> {
+  async create(userId: string, dto: CreateTripDto, isPremium: boolean): Promise<Trip> {
+    if (!isPremium) {
+      const count = await this.prisma.trip.count({ where: { userId } });
+      if (count >= FREE_TRIP_LIMIT) {
+        throw new ForbiddenException(`Free accounts are limited to ${FREE_TRIP_LIMIT} trips. Upgrade to Premium for unlimited trips.`);
+      }
+    }
+
     const trip = await this.prisma.trip.create({
       data: {
         userId,
@@ -103,7 +113,7 @@ export class TripsService {
     return toTrip(trip);
   }
 
-  async update(userId: string, id: string, dto: UpdateTripDto): Promise<Trip> {
+  async update(userId: string, id: string, dto: UpdateTripDto, isPremium: boolean): Promise<Trip> {
     await this.ensureTripAccess(userId, id);
 
     const updated = await this.prisma.trip.update({
@@ -151,8 +161,15 @@ export class TripsService {
     return { deleted: true };
   }
 
-  async addStop(userId: string, tripId: string, stopId: string): Promise<Trip> {
+  async addStop(userId: string, tripId: string, stopId: string, isPremium: boolean): Promise<Trip> {
     await this.ensureTripAccess(userId, tripId);
+
+    if (!isPremium) {
+      const stopCount = await this.prisma.tripStop.count({ where: { tripId } });
+      if (stopCount >= FREE_STOP_LIMIT) {
+        throw new ForbiddenException(`Free accounts are limited to ${FREE_STOP_LIMIT} stops per trip. Upgrade to Premium for unlimited stops.`);
+      }
+    }
 
     const stop = await this.prisma.stop.findUnique({ where: { id: stopId }, select: { id: true } });
     if (!stop) {

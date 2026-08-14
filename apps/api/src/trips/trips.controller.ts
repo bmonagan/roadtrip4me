@@ -1,5 +1,6 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
-import { CurrentUserId } from '../auth/current-user.decorator';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
+import { CurrentUser, CurrentUserId } from '../auth/current-user.decorator';
+import { PremiumGuard } from '../auth/premium.guard';
 import { TripsService } from './trips.service';
 import { AddStopDto } from './dto/add-stop.dto';
 import { AddWaypointDto } from './dto/add-waypoint.dto';
@@ -7,14 +8,18 @@ import { AddCollaboratorDto } from './dto/add-collaborator.dto';
 import { CreateTripDto } from './dto/create-trip.dto';
 import { ListTripsQueryDto } from './dto/list-trips-query.dto';
 import { UpdateTripDto } from './dto/update-trip.dto';
+import type { User as UserModel } from '../generated/prisma/client';
+
+const FREE_TRIP_LIMIT = 3;
+const FREE_STOP_LIMIT = 5;
 
 @Controller('trips')
 export class TripsController {
   constructor(private readonly tripsService: TripsService) {}
 
   @Post()
-  create(@CurrentUserId() userId: string, @Body() dto: CreateTripDto) {
-    return this.tripsService.create(userId, dto);
+  create(@CurrentUser() user: UserModel, @Body() dto: CreateTripDto) {
+    return this.tripsService.create(user.id, dto, user.isPremium);
   }
 
   @Get()
@@ -28,13 +33,13 @@ export class TripsController {
   }
 
   @Patch(':id')
-  update(@CurrentUserId() userId: string, @Param('id') id: string, @Body() dto: UpdateTripDto) {
-    return this.tripsService.update(userId, id, dto);
+  update(@CurrentUser() user: UserModel, @Param('id') id: string, @Body() dto: UpdateTripDto) {
+    return this.tripsService.update(user.id, id, dto, user.isPremium);
   }
 
   @Post(':id/stops')
-  addStop(@CurrentUserId() userId: string, @Param('id') id: string, @Body() dto: AddStopDto) {
-    return this.tripsService.addStop(userId, id, dto.stopId);
+  addStop(@CurrentUser() user: UserModel, @Param('id') id: string, @Body() dto: AddStopDto) {
+    return this.tripsService.addStop(user.id, id, dto.stopId, user.isPremium);
   }
 
   @Delete(':id/stops/:stopId')
@@ -64,6 +69,7 @@ export class TripsController {
     return this.tripsService.removeWaypoint(userId, id, waypointId);
   }
 
+  @UseGuards(PremiumGuard)
   @Post(':id/collaborators')
   addCollaborator(
     @CurrentUserId() userId: string,
