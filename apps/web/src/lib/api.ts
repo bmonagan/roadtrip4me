@@ -1,5 +1,7 @@
 import type {
   AffiliateCard,
+  BillingCancelResponse,
+  BillingStatus,
   PaginatedResponse,
   Stop,
   StopRecommendation,
@@ -139,6 +141,8 @@ export const api = {
   },
   billing: {
     checkout: () => request<{ url: string }>(`/billing/checkout`, { method: 'POST' }),
+    status: () => request<BillingStatus>(`/billing/status`),
+    cancel: () => request<BillingCancelResponse>(`/billing/cancel`, { method: 'POST' }),
   },
   trips: {
     list: (params?: ListTripsParams) =>

@@ -175,3 +175,14 @@ export interface ApiError {
   message: string;
   error: string;
 }
+
+// ─── Billing ────────────────────────────────────────────────────────────────
+
+export interface BillingStatus {
+  isPremium: boolean;
+  stripeCustomerId: string | null;
+}
+
+export interface BillingCancelResponse {
+  message: string;
+}
