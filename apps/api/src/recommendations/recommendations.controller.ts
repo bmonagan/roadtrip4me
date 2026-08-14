@@ -1,8 +1,9 @@
-import { Body, Controller, Get, NotFoundException, Param, Post } from '@nestjs/common';
+import { Body, Controller, Get, NotFoundException, Param, Post, UseGuards } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import { Throttle } from '@nestjs/throttler';
 import { CurrentUserId } from '../auth/current-user.decorator';
+import { PremiumGuard } from '../auth/premium.guard';
 import { PrismaService } from '../prisma/prisma.service';
 import { RecommendationRequestDto } from './dto/recommendation-request.dto';
 
@@ -20,6 +21,7 @@ export class RecommendationsController {
     @InjectQueue('recommendations') private readonly recommendationsQueue: Queue
   ) {}
 
+  @UseGuards(PremiumGuard)
   @Post(':tripId/recommendations')
   async enqueue(
     @CurrentUserId() userId: string,
