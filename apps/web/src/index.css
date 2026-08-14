@@ -239,7 +239,9 @@ a {
 /* ─── Buttons ─────────────────────────────────────────────────────────────── */
 
 .btn {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   padding: var(--space-xs) var(--space-md);
   border-radius: var(--radius-full);
   border: none;
@@ -250,6 +252,7 @@ a {
   font-weight: 700;
   text-decoration: none;
   font-size: 0.9rem;
+  line-height: 1;
   transition:
     transform 0.2s ease-out,
     background 0.2s,
@@ -289,6 +292,7 @@ button.primary {
   font: inherit;
   font-weight: 700;
   cursor: pointer;
+  line-height: 1;
   box-shadow: var(--shadow-soft);
   transition:
     transform 0.2s ease-out,
