@@ -28,7 +28,8 @@ export default function AddToTrip({ stopId }: { stopId: string }) {
       <button type="button" className="btn small" onClick={() => setOpen((v) => !v)}>
         + Add to trip
       </button>
-      {open && (
+      {add.isPending && <span className="added">Adding…</span>}
+      {open && !add.isPending && (
         <ul className="trip-picker">
           {trips && trips.data.length === 0 && <li className="muted">No trips yet</li>}
           {(trips?.data ?? []).map((trip) => (

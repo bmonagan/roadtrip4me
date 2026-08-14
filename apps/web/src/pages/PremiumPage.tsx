@@ -7,7 +7,7 @@ export default function PremiumPage() {
   const { isAuthenticated } = useAuth();
   const queryClient = useQueryClient();
 
-  const { data: billing, isLoading } = useQuery({
+  const { data: billing, isLoading, isError } = useQuery({
     queryKey: ['billing/status'],
     queryFn: () => api.billing.status(),
     enabled: !!isAuthenticated,
@@ -49,6 +49,8 @@ export default function PremiumPage() {
         </p>
       ) : isLoading ? (
         <p>Loading...</p>
+      ) : isError ? (
+        <p className="error">Unable to load subscription status. Please try again later.</p>
       ) : billing?.isPremium ? (
         <div className="premium-page">
           <div className="premium-status premium-active">

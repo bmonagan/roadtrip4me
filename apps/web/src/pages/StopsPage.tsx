@@ -5,6 +5,7 @@ import { api } from '../lib/api';
 import { formatDistance, titleCase } from '../lib/format';
 import VoteButtons from '../components/VoteButtons';
 import AddToTrip from '../components/AddToTrip';
+import LoadingBanner from '../components/LoadingBanner';
 
 const CATEGORIES = [
   'restaurant',
@@ -57,7 +58,7 @@ export default function StopsPage() {
       <NearbyStops />
 
       {isLoading ? (
-        <p className="muted">Loading stops…</p>
+        <LoadingBanner message="Loading stops…" />
       ) : isError ? (
         <p className="error">{(error as Error).message}</p>
       ) : (

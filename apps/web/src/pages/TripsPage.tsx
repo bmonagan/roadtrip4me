@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import type { TripSummary } from '@roadtrip4me/types';
 import { api } from '../lib/api';
 import { formatDate } from '../lib/format';
+import LoadingBanner from '../components/LoadingBanner';
 
 export default function TripsPage() {
   const { data, isLoading, isError, error } = useQuery({
@@ -10,7 +11,7 @@ export default function TripsPage() {
     queryFn: () => api.trips.list({ pageSize: 50 }),
   });
 
-  if (isLoading) return <p className="muted">Loading trips…</p>;
+  if (isLoading) return <LoadingBanner message="Loading trips…" />;
   if (isError) return <p className="error">{(error as Error).message}</p>;
 
   return (

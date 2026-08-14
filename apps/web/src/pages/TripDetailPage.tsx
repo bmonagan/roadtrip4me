@@ -9,6 +9,7 @@ import Recommendations from '../components/Recommendations';
 import PlaceSearch from '../components/PlaceSearch';
 import ShareSection from '../components/ShareSection';
 import Accommodations from '../components/Accommodations';
+import LoadingBanner from '../components/LoadingBanner';
 
 const ROUTE_POLL_MS = 1500;
 const ROUTE_POLL_MAX = 20;
@@ -73,7 +74,7 @@ export default function TripDetailPage() {
     },
   });
 
-  if (isLoading) return <p className="muted">Loading trip…</p>;
+  if (isLoading) return <LoadingBanner message="Loading trip…" />;
   if (isError) return <p className="error">{(error as Error).message}</p>;
   if (!trip) return null;
 

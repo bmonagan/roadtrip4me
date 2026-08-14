@@ -11,7 +11,7 @@ export default function Accommodations({ trip }: { trip: Trip }) {
 
   if (trip.stops.length === 0) return null;
   if (isLoading) return <p className="muted">Loading accommodations…</p>;
-  if (isError) return null;
+  if (isError) return <p className="error">Unable to load accommodation recommendations.</p>;
   if (!data || data.length === 0) return null;
 
   return (

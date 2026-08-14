@@ -2,10 +2,12 @@ import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import type { Stop } from '@roadtrip4me/types';
 import { api } from '../lib/api';
+import { useToast } from '../lib/useToast';
 
 export default function VoteButtons({ stop }: { stop: Stop }) {
   const queryClient = useQueryClient();
   const [userVote, setUserVote] = useState<1 | -1 | null>(null);
+  const { toast } = useToast();
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ['stops'] });
 
@@ -15,6 +17,7 @@ export default function VoteButtons({ stop }: { stop: Stop }) {
       setUserVote(updated.userVote);
       invalidate();
     },
+    onError: (e) => toast({ message: (e as Error).message, type: 'error' }),
   });
 
   const remove = useMutation({
@@ -23,6 +26,7 @@ export default function VoteButtons({ stop }: { stop: Stop }) {
       setUserVote(null);
       invalidate();
     },
+    onError: (e) => toast({ message: (e as Error).message, type: 'error' }),
   });
 
   const upActive = userVote === 1;
