@@ -1,21 +1,24 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import type { Trip } from '@roadtrip4me/types';
 import { api, type RecommendedStop } from '../lib/api';
 import { formatDistance, titleCase } from '../lib/format';
+import { useToast } from '../lib/useToast';
 
 const POLL_INTERVAL_MS = 1500;
+const MAX_POLL_ATTEMPTS = 40;
 
 export default function Recommendations({ trip }: { trip: Trip }) {
   const queryClient = useQueryClient();
+  const { toast } = useToast();
   const [recs, setRecs] = useState<RecommendedStop[] | null>(null);
   const [phase, setPhase] = useState<'idle' | 'processing' | 'failed'>('idle');
-  const [error, setError] = useState<string | null>(null);
   const [added, setAdded] = useState<Set<string>>(new Set());
+  const pollingRef = useRef<boolean>(false);
 
   // Poll the job until it completes or fails.
   useEffect(() => {
-    if (phase !== 'processing') return;
+    if (!pollingRef.current) return;
     let cancelled = false;
     let attempts = 0;
 
@@ -26,22 +29,28 @@ export default function Recommendations({ trip }: { trip: Trip }) {
         if (res.status === 'completed') {
           setRecs(res.data);
           setPhase('idle');
+          pollingRef.current = false;
+          toast({ message: `${res.data.length} recommendations ready!`, type: 'success' });
           return;
         }
         if (res.status === 'failed') {
-          setError(res.message ?? 'Recommendations failed');
+          pollingRef.current = false;
           setPhase('failed');
+          toast({ message: res.message ?? 'Recommendations failed', type: 'error' });
           return;
         }
-        if (res.status === 'processing' && attempts++ < 40) {
+        if (attempts++ < MAX_POLL_ATTEMPTS) {
           setTimeout(poll, POLL_INTERVAL_MS);
         } else {
+          pollingRef.current = false;
           setPhase('idle');
+          toast({ message: 'Recommendations timed out', type: 'warning' });
         }
       } catch (e) {
         if (!cancelled) {
-          setError((e as Error).message);
+          pollingRef.current = false;
           setPhase('failed');
+          toast({ message: (e as Error).message, type: 'error' });
         }
       }
     };
@@ -49,24 +58,36 @@ export default function Recommendations({ trip }: { trip: Trip }) {
     poll();
     return () => {
       cancelled = true;
+      pollingRef.current = false;
     };
-  }, [phase, trip.id]);
+  }, [trip.id, toast]);
 
-  const start = async () => {
-    setError(null);
-    setRecs(null);
-    setPhase('processing');
-    try {
-      await api.trips.recommendations.enqueue(trip.id, {
+  const cancel = () => {
+    pollingRef.current = false;
+    setPhase('idle');
+  };
+
+  const start = useMutation({
+    mutationFn: async () => {
+      setRecs(null);
+      setAdded(new Set());
+      setPhase('processing');
+      pollingRef.current = true;
+      return api.trips.recommendations.enqueue(trip.id, {
         vibes: trip.vibes,
         maxDetourMinutes: 30,
         preferences: {},
       });
-    } catch (e) {
-      setError((e as Error).message);
-      setPhase('failed');
-    }
-  };
+    },
+    onSuccess: () => {
+      toast({ message: 'Generating recommendations…', type: 'info' });
+    },
+    onError: (e) => {
+      setPhase('idle');
+      pollingRef.current = false;
+      toast({ message: (e as Error).message, type: 'error' });
+    },
+  });
 
   const add = useMutation({
     mutationFn: async (rec: RecommendedStop) => {
@@ -83,30 +104,43 @@ export default function Recommendations({ trip }: { trip: Trip }) {
     onSuccess: (rec) => {
       setAdded((prev) => new Set(prev).add(rec.name));
       queryClient.invalidateQueries({ queryKey: ['trip', trip.id] });
+      toast({ message: `${rec.name} added to trip`, type: 'success' });
     },
-    onError: (e) => setError((e as Error).message),
+    onError: (e) => {
+      toast({ message: (e as Error).message, type: 'error' });
+    },
   });
 
   return (
     <section className="recommendations">
       <div className="recommendations-head">
         <h2>AI Recommendations</h2>
-        <button
-          type="button"
-          className="btn small"
-          onClick={start}
-          disabled={phase === 'processing'}
-        >
-          {phase === 'processing' ? 'Thinking…' : recs ? 'Refresh' : 'Get recommendations'}
-        </button>
+        {phase === 'processing' ? (
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <span className="muted">Thinking…</span>
+            <button
+              type="button"
+              className="btn small"
+              onClick={cancel}
+            >
+              Cancel
+            </button>
+          </div>
+        ) : (
+          <button
+            type="button"
+            className="btn small"
+            onClick={() => start.mutate()}
+            disabled={start.isPending}
+          >
+            {start.isPending ? 'Thinking…' : recs ? 'Refresh' : 'Get recommendations'}
+          </button>
+        )}
       </div>
       <p className="muted">
         Stops suggested along your route from {trip.origin.label} to {trip.destination.label}
         {trip.vibes.length > 0 ? `, tuned to: ${trip.vibes.join(', ')}` : ''}.
       </p>
-
-      {error && <p className="error">{error}</p>}
-      {phase === 'processing' && <p className="muted">Asking the AI…</p>}
 
       {recs && (
         <ul className="rec-list">
@@ -128,7 +162,7 @@ export default function Recommendations({ trip }: { trip: Trip }) {
                 onClick={() => add.mutate(rec)}
                 disabled={add.isPending || added.has(rec.name)}
               >
-                {added.has(rec.name) ? '✓ Added' : 'Add to trip'}
+                {added.has(rec.name) ? '✓ Added' : add.isPending ? 'Adding…' : 'Add to trip'}
               </button>
             </li>
           ))}
