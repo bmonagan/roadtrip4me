@@ -4,6 +4,7 @@ import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import type { Trip, TripVibe } from '@roadtrip4me/types';
 import { api, type TripPlace } from '../lib/api';
 import PlaceSearch from '../components/PlaceSearch';
+import { useToast } from '../lib/useToast';
 
 const VIBES: TripVibe[] = ['scenic', 'foodie', 'adventure', 'historic', 'relaxed', 'family'];
 const STATUSES: Trip['status'][] = ['draft', 'planned', 'in_progress', 'completed'];
@@ -48,7 +49,7 @@ export default function TripFormPage() {
   const [status, setStatus] = useState<Trip['status']>('draft');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
-  const [formError, setFormError] = useState<string | null>(null);
+  const { toast } = useToast();
 
   /* eslint-disable react-hooks/set-state-in-effect -- seed the form from the fetched trip once */
   useEffect(() => {
@@ -90,9 +91,10 @@ export default function TripFormPage() {
           }),
     onSuccess: (saved) => {
       queryClient.invalidateQueries({ queryKey: ['trips'] });
+      toast({ message: isEdit ? 'Trip updated' : 'Trip created', type: 'success' });
       navigate(`/trips/${saved.id}`);
     },
-    onError: (e) => setFormError((e as Error).message),
+    onError: (e) => toast({ message: (e as Error).message, type: 'error' }),
   });
 
   const toggleVibe = (vibe: TripVibe) => {
@@ -101,10 +103,9 @@ export default function TripFormPage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setFormError(null);
-    if (!title.trim()) return setFormError('Title is required');
-    if (!origin) return setFormError('Pick a start location');
-    if (!destination) return setFormError('Pick an end location');
+    if (!title.trim()) return toast({ message: 'Title is required', type: 'error' });
+    if (!origin) return toast({ message: 'Pick a start location', type: 'error' });
+    if (!destination) return toast({ message: 'Pick an end location', type: 'error' });
     mutation.mutate();
   };
 
@@ -170,9 +171,6 @@ export default function TripFormPage() {
             </select>
           </label>
         </div>
-
-        {formError && <p className="error">{formError}</p>}
-        {mutation.isError && <p className="error">{(mutation.error as Error).message}</p>}
 
         <button type="submit" className="primary" disabled={mutation.isPending}>
           {mutation.isPending ? 'Saving…' : isEdit ? 'Save changes' : 'Create trip'}

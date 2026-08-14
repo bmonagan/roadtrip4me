@@ -2,11 +2,12 @@ import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { Trip } from '@roadtrip4me/types';
 import { api } from '../lib/api';
+import { useToast } from '../lib/useToast';
 
 export default function ShareSection({ trip }: { trip: Trip }) {
   const queryClient = useQueryClient();
   const [email, setEmail] = useState('');
-  const [error, setError] = useState<string | null>(null);
+  const { toast } = useToast();
 
   const { data: me } = useQuery({
     queryKey: ['me'],
@@ -24,15 +25,18 @@ export default function ShareSection({ trip }: { trip: Trip }) {
     mutationFn: () => api.trips.addCollaborator(trip.id, email.trim()),
     onSuccess: (updated) => {
       setEmail('');
-      setError(null);
       applyTrip(updated);
+      toast({ message: `${email.trim()} added as collaborator`, type: 'success' });
     },
-    onError: (e) => setError((e as Error).message),
+    onError: (e) => toast({ message: (e as Error).message, type: 'error' }),
   });
 
   const remove = useMutation({
     mutationFn: (userId: string) => api.trips.removeCollaborator(trip.id, userId),
-    onSuccess: (updated) => applyTrip(updated),
+    onSuccess: (updated) => {
+      applyTrip(updated);
+      toast({ message: 'Collaborator removed', type: 'success' });
+    },
   });
 
   return (
@@ -83,7 +87,6 @@ export default function ShareSection({ trip }: { trip: Trip }) {
           </button>
         </div>
       )}
-      {error && <p className="error">{error}</p>}
     </section>
   );
 }

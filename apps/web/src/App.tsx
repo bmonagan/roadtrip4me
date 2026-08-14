@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
 import { useAuth } from './auth/AuthContext';
 import { api } from './lib/api';
+import { ToastProvider } from './lib/useToast';
 import TripsPage from './pages/TripsPage';
 import TripDetailPage from './pages/TripDetailPage';
 import TripFormPage from './pages/TripFormPage';
@@ -12,6 +13,7 @@ import CallbackPage from './pages/CallbackPage';
 import LegalPage from './pages/LegalPage';
 import PremiumPage from './pages/PremiumPage';
 import CookieConsent from './components/CookieConsent';
+import ToastContainer from './components/ToastContainer';
 
 export default function App() {
   const { isAuthenticated, authMode, login, logout } = useAuth();
@@ -34,65 +36,67 @@ export default function App() {
   }, [searchParams, queryClient]);
 
   return (
-    <>
-      <header className="site-header">
-        <NavLink to="/" className="brand">
-          <img src="/favicon.svg" alt="" className="brand-logo" width="28" height="28" />
-          Roadtrip4me
-        </NavLink>
-        <nav className="site-nav">
-          <NavLink to="/trips">Trips</NavLink>
-          <NavLink to="/stops">Stops</NavLink>
-        </nav>
-        <div className="site-auth">
-          {me?.isPremium ? (
-            <span className="badge premium">⭐ Premium</span>
-          ) : (
-            isAuthenticated &&
-            authMode === 'auth0' && (
-              <Link to="/premium" className="btn small">Go Premium</Link>
-            )
-          )}
-          {authMode === 'auth0' &&
-            (isAuthenticated ? (
-              <button type="button" className="btn small" onClick={logout}>
-                Log out
-              </button>
+    <ToastProvider>
+      <>
+        <header className="site-header">
+          <NavLink to="/" className="brand">
+            <img src="/favicon.svg" alt="" className="brand-logo" width="28" height="28" />
+            Roadtrip4me
+          </NavLink>
+          <nav className="site-nav">
+            <NavLink to="/trips">Trips</NavLink>
+            <NavLink to="/stops">Stops</NavLink>
+          </nav>
+          <div className="site-auth">
+            {me?.isPremium ? (
+              <span className="badge premium">⭐ Premium</span>
             ) : (
-              <button type="button" className="btn small primary" onClick={login}>
-                Log in
-              </button>
-            ))}
-        </div>
-      </header>
-      <Routes>
-        {/* Full-bleed splash — not constrained by the app container. */}
-        <Route path="/" element={<HomePage />} />
-        <Route
-          path="*"
-          element={
-            <main className="site-main">
-              <Routes>
-                <Route path="/trips" element={<TripsPage />} />
-                <Route path="/trips/new" element={<TripFormPage />} />
-                <Route path="/trips/:id" element={<TripDetailPage />} />
-                <Route path="/trips/:id/edit" element={<TripFormPage />} />
-                <Route path="/stops" element={<StopsPage />} />
-                <Route path="/terms" element={<LegalPage kind="terms" />} />
-                <Route path="/privacy" element={<LegalPage kind="privacy" />} />
-                <Route path="/auth/callback" element={<CallbackPage />} />
-                <Route path="/premium" element={<PremiumPage />} />
-              </Routes>
-            </main>
-          }
-        />
-      </Routes>
-      <footer className="site-footer">
-        <Link to="/terms">Terms</Link>
-        <Link to="/privacy">Privacy</Link>
-        <span className="muted">© {new Date().getFullYear()} Roadtrip4me</span>
-      </footer>
-      <CookieConsent />
-    </>
+              isAuthenticated &&
+              authMode === 'auth0' && (
+                <Link to="/premium" className="btn small">Go Premium</Link>
+              )
+            )}
+            {authMode === 'auth0' &&
+              (isAuthenticated ? (
+                <button type="button" className="btn small" onClick={logout}>
+                  Log out
+                </button>
+              ) : (
+                <button type="button" className="btn small primary" onClick={login}>
+                  Log in
+                </button>
+              ))}
+          </div>
+        </header>
+        <Routes>
+          <Route path="/" element={<HomePage />} />
+          <Route
+            path="*"
+            element={
+              <main className="site-main">
+                <Routes>
+                  <Route path="/trips" element={<TripsPage />} />
+                  <Route path="/trips/new" element={<TripFormPage />} />
+                  <Route path="/trips/:id" element={<TripDetailPage />} />
+                  <Route path="/trips/:id/edit" element={<TripFormPage />} />
+                  <Route path="/stops" element={<StopsPage />} />
+                  <Route path="/terms" element={<LegalPage kind="terms" />} />
+                  <Route path="/privacy" element={<LegalPage kind="privacy" />} />
+                  <Route path="/auth/callback" element={<CallbackPage />} />
+                  <Route path="/premium" element={<PremiumPage />} />
+                </Routes>
+              </main>
+            }
+          />
+        </Routes>
+        <footer className="site-footer">
+          <Link to="/terms">Terms</Link>
+          <Link to="/privacy">Privacy</Link>
+          <span className="muted">© {new Date().getFullYear()} Roadtrip4me</span>
+        </footer>
+        <CookieConsent />
+        <ToastContainer />
+      </>
+    </ToastProvider>
   );
 }

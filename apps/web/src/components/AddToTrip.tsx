@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../lib/api';
+import { useToast } from '../lib/useToast';
 
 export default function AddToTrip({ stopId }: { stopId: string }) {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
-  const [added, setAdded] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const { toast } = useToast();
 
   const { data: trips } = useQuery({
     queryKey: ['trips'],
@@ -17,12 +17,10 @@ export default function AddToTrip({ stopId }: { stopId: string }) {
     mutationFn: (tripId: string) => api.trips.addStop(tripId, stopId),
     onSuccess: () => {
       setOpen(false);
-      setAdded(true);
-      setError(null);
       queryClient.invalidateQueries({ queryKey: ['trips'] });
-      setTimeout(() => setAdded(false), 2000);
+      toast({ message: 'Added to trip', type: 'success' });
     },
-    onError: (e) => setError((e as Error).message),
+    onError: (e) => toast({ message: (e as Error).message, type: 'error' }),
   });
 
   return (
@@ -42,8 +40,6 @@ export default function AddToTrip({ stopId }: { stopId: string }) {
           ))}
         </ul>
       )}
-      {added && <span className="added">✓ Added</span>}
-      {error && <span className="error">{error}</span>}
     </div>
   );
 }
