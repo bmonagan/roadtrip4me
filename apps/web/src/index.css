@@ -80,6 +80,9 @@ a {
 .site-header .brand:hover {
   transform: scale(1.05);
 }
+.brand-logo {
+  flex-shrink: 0;
+}
 .site-nav {
   display: flex;
   gap: var(--space-sm);

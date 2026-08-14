@@ -1,5 +1,5 @@
 import { NavLink, Link, Route, Routes, useSearchParams } from 'react-router-dom';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
 import { useAuth } from './auth/AuthContext';
 import { api } from './lib/api';
@@ -10,6 +10,7 @@ import StopsPage from './pages/StopsPage';
 import HomePage from './pages/HomePage';
 import CallbackPage from './pages/CallbackPage';
 import LegalPage from './pages/LegalPage';
+import PremiumPage from './pages/PremiumPage';
 import CookieConsent from './components/CookieConsent';
 
 export default function App() {
@@ -32,18 +33,12 @@ export default function App() {
     }
   }, [searchParams, queryClient]);
 
-  const checkout = useMutation({
-    mutationFn: () => api.billing.checkout(),
-    onSuccess: (res) => {
-      window.location.href = res.url;
-    },
-  });
-
   return (
     <>
       <header className="site-header">
         <NavLink to="/" className="brand">
-          🚗 Roadtrip4me
+          <img src="/favicon.svg" alt="" className="brand-logo" width="28" height="28" />
+          Roadtrip4me
         </NavLink>
         <nav className="site-nav">
           <NavLink to="/trips">Trips</NavLink>
@@ -55,14 +50,7 @@ export default function App() {
           ) : (
             isAuthenticated &&
             authMode === 'auth0' && (
-              <button
-                type="button"
-                className="btn small"
-                onClick={() => checkout.mutate()}
-                disabled={checkout.isPending}
-              >
-                Go Premium
-              </button>
+              <Link to="/premium" className="btn small">Go Premium</Link>
             )
           )}
           {authMode === 'auth0' &&
@@ -93,6 +81,7 @@ export default function App() {
                 <Route path="/terms" element={<LegalPage kind="terms" />} />
                 <Route path="/privacy" element={<LegalPage kind="privacy" />} />
                 <Route path="/auth/callback" element={<CallbackPage />} />
+                <Route path="/premium" element={<PremiumPage />} />
               </Routes>
             </main>
           }
