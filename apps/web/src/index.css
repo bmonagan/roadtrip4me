@@ -902,3 +902,15 @@ button.primary:disabled {
   }
 }
 
+.input-error {
+  border-color: var(--color-error) !important;
+  border-width: 2px !important;
+}
+
+.field-error {
+  display: block;
+  margin-top: 0.25rem;
+  color: var(--color-error);
+  font-size: 0.75rem;
+}
+

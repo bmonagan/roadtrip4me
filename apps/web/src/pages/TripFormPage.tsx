@@ -50,6 +50,8 @@ export default function TripFormPage() {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const { toast } = useToast();
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
 
   /* eslint-disable react-hooks/set-state-in-effect -- seed the form from the fetched trip once */
   useEffect(() => {
@@ -101,11 +103,26 @@ export default function TripFormPage() {
     setVibes((prev) => (prev.includes(vibe) ? prev.filter((v) => v !== vibe) : [...prev, vibe]));
   };
 
+  const validate = (): Record<string, string> => {
+    const errs: Record<string, string> = {};
+    if (!title.trim()) errs.title = 'Title is required';
+    if (!origin) errs.origin = 'Pick a start location';
+    if (!destination) errs.destination = 'Pick an end location';
+    if (startDate && endDate && endDate < startDate) errs.endDate = 'End date must be after start date';
+    return errs;
+  };
+
+  const touchField = (field: string) => {
+    setTouched((prev) => ({ ...prev, [field]: true }));
+    setErrors(validate());
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title.trim()) return toast({ message: 'Title is required', type: 'error' });
-    if (!origin) return toast({ message: 'Pick a start location', type: 'error' });
-    if (!destination) return toast({ message: 'Pick an end location', type: 'error' });
+    const errs = validate();
+    setErrors(errs);
+    setTouched({ title: true, origin: true, destination: true, endDate: true });
+    if (Object.keys(errs).length > 0) return;
     mutation.mutate();
   };
 
@@ -124,15 +141,36 @@ export default function TripFormPage() {
           <input
             type="text"
             value={title}
-            onChange={(e) => setTitle(e.target.value)}
+            onChange={(e) => { setTitle(e.target.value); setErrors((p) => ({ ...p, title: '' })); }}
+            onBlur={() => touchField('title')}
             placeholder="e.g. Route 66 Classic"
             maxLength={120}
+            className={touched.title && errors.title ? 'input-error' : ''}
           />
+          {touched.title && errors.title && <small className="field-error">{errors.title}</small>}
         </label>
 
         <div className="form-row">
-          <PlaceSearch label="Start" value={origin} onSelect={setOrigin} />
-          <PlaceSearch label="Destination" value={destination} onSelect={setDestination} />
+          <div>
+            <PlaceSearch
+              label="Start"
+              value={origin}
+              onSelect={(p) => { setOrigin(p); setErrors((prev) => ({ ...prev, origin: '' })); }}
+              error={touched.origin ? errors.origin || '' : ''}
+              onBlur={() => touchField('origin')}
+            />
+            {touched.origin && errors.origin && <small className="field-error">{errors.origin}</small>}
+          </div>
+          <div>
+            <PlaceSearch
+              label="Destination"
+              value={destination}
+              onSelect={(p) => { setDestination(p); setErrors((prev) => ({ ...prev, destination: '' })); }}
+              error={touched.destination ? errors.destination || '' : ''}
+              onBlur={() => touchField('destination')}
+            />
+            {touched.destination && errors.destination && <small className="field-error">{errors.destination}</small>}
+          </div>
         </div>
 
         <fieldset className="vibe-fieldset">
@@ -154,11 +192,23 @@ export default function TripFormPage() {
         <div className="form-row">
           <label>
             <span>Start date</span>
-            <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+            <input
+              type="date"
+              value={startDate}
+              onChange={(e) => { setStartDate(e.target.value); setErrors((p) => ({ ...p, endDate: '' })); }}
+              onBlur={() => touchField('endDate')}
+            />
           </label>
           <label>
             <span>End date</span>
-            <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
+            <input
+              type="date"
+              value={endDate}
+              onChange={(e) => { setEndDate(e.target.value); setErrors((p) => ({ ...p, endDate: '' })); }}
+              onBlur={() => touchField('endDate')}
+              className={touched.endDate && errors.endDate ? 'input-error' : ''}
+            />
+            {touched.endDate && errors.endDate && <small className="field-error">{errors.endDate}</small>}
           </label>
           <label>
             <span>Status</span>

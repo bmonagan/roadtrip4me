@@ -6,13 +6,15 @@ interface PlaceSearchProps {
   label: string;
   value?: GeocodeResult | null;
   onSelect: (place: GeocodeResult) => void;
+  error?: string;
+  onBlur?: () => void;
 }
 
-export default function PlaceSearch({ label, value, onSelect }: PlaceSearchProps) {
+export default function PlaceSearch({ label, value, onSelect, error: validationError, onBlur: onBlurProp }: PlaceSearchProps) {
   const [query, setQuery] = useState(value?.label ?? '');
   const [results, setResults] = useState<GeocodeResult[]>([]);
   const [open, setOpen] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [searchError, setSearchError] = useState<string | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -34,9 +36,9 @@ export default function PlaceSearch({ label, value, onSelect }: PlaceSearchProps
     timerRef.current = setTimeout(async () => {
       try {
         setResults(await geocode(text));
-        setError(null);
+        setSearchError(null);
       } catch (e) {
-        setError((e as Error).message);
+        setSearchError((e as Error).message);
         setResults([]);
       }
     }, 350);
@@ -58,9 +60,11 @@ export default function PlaceSearch({ label, value, onSelect }: PlaceSearchProps
         value={query}
         onChange={(e) => handleChange(e.target.value)}
         onFocus={() => results.length > 0 && setOpen(true)}
-        onBlur={() => setTimeout(() => setOpen(false), 150)}
+        onBlur={() => { setTimeout(() => setOpen(false), 150); onBlurProp?.(); }}
+        className={(searchError || validationError) ? 'input-error' : ''}
       />
-      {error && <small className="error">{error}</small>}
+      {searchError && <small className="error">{searchError}</small>}
+      {validationError && <small className="field-error">{validationError}</small>}
       {open && results.length > 0 && (
         <ul className="place-results">
           {results.map((place, i) => (
