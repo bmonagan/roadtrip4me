@@ -1,6 +1,5 @@
 # Roadtrip4me API — production image.
 # Build from the repo root: docker build -f apps/api/Dockerfile .
-# On boot it applies migrations, then starts the built server.
 
 FROM oven/bun:1 AS build
 WORKDIR /app
@@ -9,8 +8,13 @@ RUN bun install --frozen-lockfile \
   && bunx prisma generate \
   && bun run --cwd apps/api build
 
-FROM oven/bun:1 AS runtime
+FROM oven/bun:1-slim AS runtime
+RUN useradd --create-home --shell /bin/sh appuser
 WORKDIR /app
-COPY --from=build /app /app
+COPY --from=build --chown=appuser:appuser /app /app
+
+USER appuser
 EXPOSE 3000
-CMD ["sh", "-c", "bunx prisma migrate deploy && bun run --cwd apps/api start"]
+COPY --chown=appuser:appuser deploy/docker-entrypoint.sh /docker-entrypoint.sh
+RUN chmod +x /docker-entrypoint.sh
+ENTRYPOINT ["/docker-entrypoint.sh"]

@@ -1,3 +1,4 @@
+bought the website from porkbun. roadtrip4me.com
 browse community stops not centered in its bubble [DONE]
 better logo [DONE]
 premium setup:

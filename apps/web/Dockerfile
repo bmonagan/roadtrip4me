@@ -1,9 +1,13 @@
-# Roadtrip4me web — serves the SPA and reverse-proxies /api to the API service
-# so the browser talks to a single origin (no CORS in production).
+# Roadtrip4me web — serves the SPA (nginx static only; Caddy handles reverse proxy)
 # Build from the repo root: docker build -f apps/web/Dockerfile .
 
 FROM oven/bun:1 AS build
+RUN useradd --create-home --shell /bin/sh appuser
 WORKDIR /app
+COPY package.json bun.lock ./
+COPY apps/web/package.json ./apps/web/
+COPY packages/*/package.json ./packages/*/
+RUN --mount=type=cache,target=/root/.bun/install/cache bun install --frozen-lockfile
 COPY . .
 
 ARG VITE_MAPBOX_TOKEN
@@ -15,8 +19,7 @@ ENV VITE_MAPBOX_TOKEN=${VITE_MAPBOX_TOKEN} \
     VITE_AUTH0_CLIENT_ID=${VITE_AUTH0_CLIENT_ID} \
     VITE_AUTH0_AUDIENCE=${VITE_AUTH0_AUDIENCE}
 
-RUN bun install --frozen-lockfile \
-  && bun run --cwd apps/web build
+RUN bun run --cwd apps/web build
 
 FROM nginx:alpine
 COPY apps/web/nginx.conf /etc/nginx/conf.d/default.conf

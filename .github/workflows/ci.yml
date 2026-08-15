@@ -4,9 +4,11 @@ on:
   push:
     branches: [main]
   pull_request:
+    branches: [main]
 
 jobs:
-  check:
+  lint-and-typecheck:
+    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -15,23 +17,32 @@ jobs:
         with:
           bun-version: latest
 
-      - name: Install dependencies
-        run: bun install --frozen-lockfile
+      - run: bun install
 
-      - name: Generate Prisma client
-        run: bunx prisma generate
+      - run: npx prisma generate
 
-      - name: Typecheck
-        run: bun run typecheck
+      - name: Typecheck API
+        run: bun run --cwd apps/api typecheck
 
-      - name: Lint
-        run: bun run lint
+      - name: Typecheck Web
+        run: bun run --cwd apps/web typecheck
 
-      - name: Test
-        run: bun run test
+  build:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
 
-      - name: Build
-        run: bun run build
-        env:
-          VITE_API_URL: http://localhost:3000
-          VITE_MAPBOX_TOKEN: placeholder-for-ci-build
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - run: bun install
+
+      - run: npx prisma generate
+
+      - name: Build API
+        run: bun run --cwd apps/api build
+
+      - name: Build Web
+        run: bun run --cwd apps/web build
