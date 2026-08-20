@@ -5,11 +5,12 @@ on:
     branches: [main]
 
 jobs:
-  build-and-push:
+  build-and-deploy:
     runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
+
     steps:
       - uses: actions/checkout@v4
 
@@ -23,7 +24,7 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and push API image
+      - name: Build API image
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -31,7 +32,7 @@ jobs:
           push: true
           tags: ghcr.io/${{ github.repository }}/roadtrip4me-api:${{ github.sha }}
 
-      - name: Build and push Web image
+      - name: Build Web image
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -43,3 +44,60 @@ jobs:
             VITE_AUTH0_DOMAIN=${{ secrets.VITE_AUTH0_DOMAIN }}
             VITE_AUTH0_CLIENT_ID=${{ secrets.VITE_AUTH0_CLIENT_ID }}
             VITE_AUTH0_AUDIENCE=${{ secrets.VITE_AUTH0_AUDIENCE }}
+
+      - name: Install Fly CLI
+        run: |
+          curl -L https://download.fly.io/flyctl/archive/latest/linux-amd64 -o /tmp/flyctl
+          chmod +x /tmp/flyctl
+          sudo mv /tmp/flyctl /usr/local/bin/flyctl
+
+      - name: Deploy API to Fly.io
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+        run: |
+          flyctl apps create roadtrip4me-api --org personal || true
+          flyctl deploy \
+            --app roadtrip4me-api \
+            --image ghcr.io/${{ github.repository }}/roadtrip4me-api:${{ github.sha }} \
+            --config apps/api/fly.toml
+
+      - name: Deploy Web to Fly.io
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+        run: |
+          flyctl apps create roadtrip4me-web --org personal || true
+          flyctl deploy \
+            --app roadtrip4me-web \
+            --image ghcr.io/${{ github.repository }}/roadtrip4me-web:${{ github.sha }} \
+            --config apps/web/fly.toml
+
+      - name: Set API secrets on Fly.io
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+        run: |
+          flyctl secrets set \
+            --app roadtrip4me-api \
+            DATABASE_URL=${{ secrets.DATABASE_URL }} \
+            REDIS_URL=${{ secrets.REDIS_URL }} \
+            AUTH0_DOMAIN=${{ secrets.AUTH0_DOMAIN }} \
+            AUTH0_AUDIENCE=${{ secrets.AUTH0_AUDIENCE }} \
+            AUTH0_CLIENT_ID=${{ secrets.AUTH0_CLIENT_ID }} \
+            AUTH0_CLIENT_SECRET=${{ secrets.AUTH0_CLIENT_SECRET }} \
+            AUTH0_JWKS_URL=${{ secrets.AUTH0_JWKS_URL }} \
+            STRIPE_SECRET_KEY=${{ secrets.STRIPE_SECRET_KEY }} \
+            STRIPE_PRICE_ID=${{ secrets.STRIPE_PRICE_ID }} \
+            STRIPE_WEBHOOK_SECRET=${{ secrets.STRIPE_WEBHOOK_SECRET }} \
+            STRIPE_WEBHOOK_ENDPOINT_SECRET=${{ secrets.STRIPE_WEBHOOK_ENDPOINT_SECRET }} \
+            GOOGLE_MAPS_API_KEY=${{ secrets.GOOGLE_MAPS_API_KEY }} \
+            MAPBOX_ACCESS_TOKEN=${{ secrets.MAPBOX_ACCESS_TOKEN }} \
+            CORS_ORIGIN=${{ secrets.CORS_ORIGIN }} \
+            APP_ORIGIN=${{ secrets.APP_ORIGIN }} \
+            DEEPSEEK_API_KEY=${{ secrets.DEEPSEEK_API_KEY }} \
+            YELP_API_KEY=${{ secrets.YELP_API_KEY }} \
+            BOOKING_COM_AFFILIATE_ID=${{ secrets.BOOKING_COM_AFFILIATE_ID }} \
+            EXPEDIA_AFFILIATE_ID=${{ secrets.EXPEDIA_AFFILIATE_ID }} \
+            SESSION_SECRET=${{ secrets.SESSION_SECRET }}
+
+      - name: Clean up Fly CLI
+        if: always()
+        run: sudo rm -f /usr/local/bin/flyctl
