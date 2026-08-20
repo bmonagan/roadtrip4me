@@ -5,11 +5,12 @@ app = "roadtrip4me-web"
 primary_region = "ord"
 
 [build]
+  remote_only = true
 
 [http_service]
   internal_port = 80
   force_https = true
-  auto_stop_machines = "pause"
+  auto_stop_machines = "stop"
   auto_start_machines = true
   min_machines_running = 1
 
