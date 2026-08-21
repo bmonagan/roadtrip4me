@@ -6,7 +6,8 @@ WORKDIR /app
 COPY . .
 RUN bun install --frozen-lockfile \
   && bunx prisma generate \
-  && bun run --cwd apps/api build
+  && bun run --cwd apps/api build \
+  && bunx prisma migrate deploy
 
 FROM oven/bun:1-slim AS runtime
 RUN useradd --create-home --shell /bin/sh appuser
