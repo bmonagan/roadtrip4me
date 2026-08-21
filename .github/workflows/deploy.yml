@@ -54,23 +54,14 @@ jobs:
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
         run: |
-          mkdir -p ~/.docker
-          AUTH=$(echo -n "${{ github.actor }}:${{ secrets.GHCR_PULL_TOKEN }}" | base64)
-          cat > ~/.docker/config.json <<EOF
-          {
-            "auths": {
-              "ghcr.io": {
-                "auth": "${AUTH}"
-              }
-            }
-          }
-          EOF
+          flyctl auth registry ghcr.io \
+            --username ${{ github.actor }} \
+            --password ${{ secrets.GITHUB_TOKEN }}
 
       - name: Deploy API to Fly.io
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
         run: |
-          flyctl apps create roadtrip4me-api --org personal || true
           flyctl deploy \
             --app roadtrip4me-api \
             --image ghcr.io/${{ github.repository }}/roadtrip4me-api:${{ github.sha }} \
@@ -80,7 +71,6 @@ jobs:
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
         run: |
-          flyctl apps create roadtrip4me-web --org personal || true
           flyctl deploy \
             --app roadtrip4me-web \
             --image ghcr.io/${{ github.repository }}/roadtrip4me-web:${{ github.sha }} \
