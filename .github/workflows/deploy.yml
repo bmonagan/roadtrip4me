@@ -53,9 +53,20 @@ jobs:
       - name: Authenticate Fly to GHCR
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+          FLY_GHCR_USER: ${{ github.actor }}
+          FLY_GHCR_PASS: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          printf '%s\n%s\n%s\n' 'ghcr.io' '${{ github.actor }}' '${{ secrets.GITHUB_TOKEN }}' \
-            | script -qc "flyctl auth docker" /dev/null
+          sudo apt-get install -y expect
+          expect << 'ENDOFEXPECT'
+          spawn flyctl auth docker
+          expect "Registry:"
+          send "ghcr.io\r"
+          expect "Username:"
+          send "${FLY_GHCR_USER}\r"
+          expect "Password:"
+          send "${FLY_GHCR_PASS}\r"
+          expect eof
+          ENDOFEXPECT
 
       - name: Deploy API to Fly.io
         env:
