@@ -54,11 +54,8 @@ jobs:
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
         run: |
-          script -qc "flyctl auth docker" /dev/null <<EOF
-          ghcr.io
-          ${{ github.actor }}
-          ${{ secrets.GITHUB_TOKEN }}
-          EOF
+          printf '%s\n%s\n%s\n' 'ghcr.io' '${{ github.actor }}' '${{ secrets.GITHUB_TOKEN }}' \
+            | script -qc "flyctl auth docker" /dev/null
 
       - name: Deploy API to Fly.io
         env:
