@@ -54,9 +54,7 @@ jobs:
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
         run: |
-          flyctl auth docker ghcr.io \
-            --username ${{ github.actor }} \
-            --password ${{ secrets.GHCR_PULL_TOKEN }}
+          printf '%s\n' 'ghcr.io' '${{ github.actor }}' '${{ secrets.GHCR_PULL_TOKEN }}' | fly auth docker
 
       - name: Deploy API to Fly.io
         env:
