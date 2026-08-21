@@ -46,10 +46,7 @@ jobs:
             VITE_AUTH0_AUDIENCE=${{ secrets.VITE_AUTH0_AUDIENCE }}
 
       - name: Install Fly CLI
-        run: |
-          curl -L https://download.fly.io/flyctl/archive/latest/linux-amd64 -o /tmp/flyctl
-          chmod +x /tmp/flyctl
-          sudo mv /tmp/flyctl /usr/local/bin/flyctl
+        uses: superfly/flyctl-actions/setup-flyctl@master
 
       - name: Deploy API to Fly.io
         env:
