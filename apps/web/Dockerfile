@@ -4,11 +4,8 @@
 FROM oven/bun:1 AS build
 RUN useradd --create-home --shell /bin/sh appuser
 WORKDIR /app
-COPY package.json bun.lock ./
-COPY apps/web/package.json ./apps/web/
-COPY packages/*/package.json ./packages/*/
-RUN --mount=type=cache,target=/root/.bun/install/cache bun install --frozen-lockfile
 COPY . .
+RUN --mount=type=cache,target=/root/.bun/install/cache bun install --frozen-lockfile
 
 ARG VITE_MAPBOX_TOKEN
 ARG VITE_AUTH0_DOMAIN

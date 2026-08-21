@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "bun run --watch src/main.ts",
-    "build": "bun build src/main.ts --outdir dist --target bun --external '@nestjs/microservices' --external '@nestjs/platform-express' --external '@nestjs/websockets' --external '@fastify/static' --external '@fastify/view'",
+    "build": "bun build src/main.ts --outdir dist --target bun --external '*'",
     "start": "bun dist/main.js",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src",
