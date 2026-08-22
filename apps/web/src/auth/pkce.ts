@@ -30,6 +30,7 @@ export function buildAuthorizeUrl(opts: {
   redirectUri: string;
   state: string;
   codeChallenge: string;
+  screenHint?: 'signup';
 }): string {
   const params = new URLSearchParams({
     response_type: 'code',
@@ -41,6 +42,7 @@ export function buildAuthorizeUrl(opts: {
     scope: 'openid profile email',
   });
   if (opts.audience) params.set('audience', opts.audience);
+  if (opts.screenHint) params.set('screen_hint', opts.screenHint);
   return `https://${opts.domain}/authorize?${params.toString()}`;
 }
 

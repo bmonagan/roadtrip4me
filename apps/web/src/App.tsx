@@ -11,6 +11,7 @@ import StopsPage from './pages/StopsPage';
 import HomePage from './pages/HomePage';
 import CallbackPage from './pages/CallbackPage';
 import LoginPage from './pages/LoginPage';
+import SignupPage from './pages/SignupPage';
 import LegalPage from './pages/LegalPage';
 import PremiumPage from './pages/PremiumPage';
 import CookieConsent from './components/CookieConsent';
@@ -64,9 +65,14 @@ export default function App() {
                   Log out
                 </button>
               ) : (
-                <button type="button" className="btn small primary" onClick={login}>
-                  Log in
-                </button>
+                <>
+                  <Link to="/signup" className="btn small">
+                    Sign up
+                  </Link>
+                  <button type="button" className="btn small primary" onClick={login}>
+                    Log in
+                  </button>
+                </>
               ))}
             {authMode === 'dev' && (
               <Link to="/login" className="btn small">
@@ -91,6 +97,7 @@ export default function App() {
                   <Route path="/privacy" element={<LegalPage kind="privacy" />} />
                   <Route path="/auth/callback" element={<CallbackPage />} />
                   <Route path="/login" element={<LoginPage />} />
+                  <Route path="/signup" element={<SignupPage />} />
                   <Route path="/premium" element={<PremiumPage />} />
                 </Routes>
               </main>

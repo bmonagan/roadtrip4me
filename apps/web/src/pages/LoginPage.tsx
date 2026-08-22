@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 
 // Known seeded identities (see apps/api/prisma/seed.ts). Shown only in dev
@@ -34,6 +34,9 @@ export default function LoginPage() {
         <button type="button" className="btn primary" onClick={login}>
           Continue to login
         </button>
+        <p className="muted">
+          New here? <Link to="/signup">Create an account</Link>
+        </p>
       </div>
     );
   }
