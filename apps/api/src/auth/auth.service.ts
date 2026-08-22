@@ -11,6 +11,8 @@ import { PrismaService } from '../prisma/prisma.service';
 interface VerifiedToken {
   authId: string;
   email?: string | null;
+  name?: string | null;
+  picture?: string | null;
 }
 
 /**
@@ -33,11 +35,7 @@ export class AuthService implements OnModuleDestroy {
     if (this.authEnabled) {
       const token = this.extractBearer(rawAuth);
       const verified = await this.verifyToken(token);
-      const user = await this.prisma.user.findUnique({ where: { authId: verified.authId } });
-      if (!user) {
-        throw new UnauthorizedException('Account not found');
-      }
-      return user;
+      return this.resolveAccount(verified);
     }
 
     // Local dev fallback: trust the x-user-id header.
@@ -77,11 +75,48 @@ export class AuthService implements OnModuleDestroy {
       return {
         authId,
         email: typeof payload.email === 'string' ? payload.email : null,
+        name: typeof payload.name === 'string' ? payload.name : null,
+        picture: typeof payload.picture === 'string' ? payload.picture : null,
       };
     } catch (error) {
       this.logger.warn(`Token verification failed: ${(error as Error).message}`);
       throw new UnauthorizedException('Invalid or expired token');
     }
+  }
+
+  /**
+   * Resolves a verified token to a User row, provisioning the account on first
+   * login: look up by authId first; otherwise link by email (adopting the new
+   * sub); otherwise create a new User. Requires an email claim to provision.
+   */
+  private async resolveAccount(verified: VerifiedToken): Promise<UserModel> {
+    const existing = await this.prisma.user.findUnique({
+      where: { authId: verified.authId },
+    });
+    if (existing) return existing;
+
+    if (verified.email) {
+      const linked = await this.prisma.user.findUnique({
+        where: { email: verified.email },
+      });
+      if (linked) {
+        return this.prisma.user.update({
+          where: { id: linked.id },
+          data: { authId: verified.authId },
+        });
+      }
+      return this.prisma.user.create({
+        data: {
+          authId: verified.authId,
+          email: verified.email,
+          displayName:
+            verified.name || verified.email.split('@')[0] || verified.authId,
+          avatarUrl: verified.picture ?? null,
+        },
+      });
+    }
+
+    throw new UnauthorizedException('Account not found');
   }
 
   private getJwks(): Promise<jose.JWTVerifyGetKey> {
