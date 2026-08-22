@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import type { AffiliateCard } from '@roadtrip4me/types';
+import type { AffiliateCard } from '../types';
 import type { Stop as StopModel } from '../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 

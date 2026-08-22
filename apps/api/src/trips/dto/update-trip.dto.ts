@@ -9,7 +9,7 @@ import {
   MinLength,
   ValidateNested,
 } from 'class-validator';
-import type { TripStatus, TripVibe } from '@roadtrip4me/types';
+import type { TripStatus, TripVibe } from '../../types';
 import { PlaceDto } from './create-trip.dto';
 
 const TRIP_STATUSES = ['draft', 'planned', 'in_progress', 'completed'] as const;

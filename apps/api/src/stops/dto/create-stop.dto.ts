@@ -9,7 +9,7 @@ import {
   MaxLength,
   ValidateNested,
 } from 'class-validator';
-import type { StopCategory } from '@roadtrip4me/types';
+import type { StopCategory } from '../../types';
 
 const STOP_CATEGORIES = [
   'restaurant',

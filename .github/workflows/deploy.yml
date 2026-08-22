@@ -1,97 +1,77 @@
-name: Deploy
+name: CI & Deploy
 
 on:
   push:
     branches: [main]
 
-jobs:
-  build-and-deploy:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
+concurrency:
+  group: ${{ github.ref }}
+  cancel-in-progress: true
 
+env:
+  FLY_ACCESS_TOKEN: ${{ secrets.FLY_ACCESS_TOKEN }}
+
+jobs:
+  # ─── CI checks (run at repo root) ────────────────────────────────
+  ci:
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Login to GHCR
-        uses: docker/login-action@v3
+      - uses: oven-sh/setup-bun@v1
         with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          bun-version: latest
 
-      - name: Build API image
-        uses: docker/build-push-action@v6
+      - run: bun install --frozen-lockfile
+
+      - name: Typecheck
+        run: bun run typecheck
+
+      - name: Lint
+        run: bun run lint
+
+      - name: Test
+        run: bun run test
+
+  # ─── Deploy API ───────────────────────────────────────────────────
+  deploy-api:
+    needs: ci
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: superfly/fly-actions/gactions/deploy@master
         with:
-          context: .
-          file: apps/api/Dockerfile
-          push: true
-          tags: ghcr.io/${{ github.repository }}/roadtrip4me-api:${{ github.sha }}
+          app: roadtrip4me-api
+          working_directory: apps/api
 
-      - name: Build Web image
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: apps/web/Dockerfile
-          push: true
-          tags: ghcr.io/${{ github.repository }}/roadtrip4me-web:${{ github.sha }}
-          build-args: |
-            VITE_MAPBOX_TOKEN=${{ secrets.VITE_MAPBOX_TOKEN }}
-            VITE_AUTH0_DOMAIN=${{ secrets.VITE_AUTH0_DOMAIN }}
-            VITE_AUTH0_CLIENT_ID=${{ secrets.VITE_AUTH0_CLIENT_ID }}
-            VITE_AUTH0_AUDIENCE=${{ secrets.VITE_AUTH0_AUDIENCE }}
-            VITE_API_URL=${{ secrets.VITE_API_URL }}
-
-      - name: Install Fly CLI
-        uses: superfly/flyctl-actions/setup-flyctl@master
-        env:
-          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
-
-      - name: Deploy API to Fly.io
-        env:
-          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+      - name: Set Fly secrets (API)
         run: |
-          flyctl deploy \
-            --app roadtrip4me-api \
-            --image ghcr.io/${{ github.repository }}/roadtrip4me-api:${{ github.sha }} \
-            --config apps/api/fly.toml
-
-      - name: Deploy Web to Fly.io
-        env:
-          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
-        run: |
-          flyctl deploy \
-            --app roadtrip4me-web \
-            --image ghcr.io/${{ github.repository }}/roadtrip4me-web:${{ github.sha }} \
-            --config apps/web/fly.toml
-
-      - name: Set API secrets on Fly.io
-        env:
-          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
-        run: |
-          flyctl secrets set \
-            --app roadtrip4me-api \
-            DATABASE_URL=${{ secrets.DATABASE_URL }} \
-            REDIS_URL=${{ secrets.REDIS_URL }} \
-            AUTH0_DOMAIN=${{ secrets.AUTH0_DOMAIN }} \
-            AUTH0_AUDIENCE=${{ secrets.AUTH0_AUDIENCE }} \
-            AUTH0_CLIENT_ID=${{ secrets.AUTH0_CLIENT_ID }} \
-            AUTH0_CLIENT_SECRET=${{ secrets.AUTH0_CLIENT_SECRET }} \
-            AUTH0_JWKS_URL=${{ secrets.AUTH0_JWKS_URL }} \
+          fly secrets set --app roadtrip4me-api \
             STRIPE_SECRET_KEY=${{ secrets.STRIPE_SECRET_KEY }} \
             STRIPE_PRICE_ID=${{ secrets.STRIPE_PRICE_ID }} \
             STRIPE_WEBHOOK_SECRET=${{ secrets.STRIPE_WEBHOOK_SECRET }} \
-            STRIPE_WEBHOOK_ENDPOINT_SECRET=${{ secrets.STRIPE_WEBHOOK_ENDPOINT_SECRET }} \
             GOOGLE_MAPS_API_KEY=${{ secrets.GOOGLE_MAPS_API_KEY }} \
-            MAPBOX_ACCESS_TOKEN=${{ secrets.MAPBOX_ACCESS_TOKEN }} \
-            CORS_ORIGIN=${{ secrets.CORS_ORIGIN }} \
-            APP_ORIGIN=${{ secrets.APP_ORIGIN }} \
-            DEEPSEEK_API_KEY=${{ secrets.DEEPSEEK_API_KEY }} \
-            YELP_API_KEY=${{ secrets.YELP_API_KEY }} \
-            BOOKING_COM_AFFILIATE_ID=${{ secrets.BOOKING_COM_AFFILIATE_ID }} \
-            EXPEDIA_AFFILIATE_ID=${{ secrets.EXPEDIA_AFFILIATE_ID }} \
-            SESSION_SECRET=${{ secrets.SESSION_SECRET }}
+            APP_ORIGIN=https://roadtrip4me-web.fly.dev \
+            CORS_ORIGIN=https://roadtrip4me-web.fly.dev
+
+  # ─── Deploy Web ───────────────────────────────────────────────────
+  deploy-web:
+    needs: ci
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: superfly/fly-actions/gactions/deploy@master
+        with:
+          app: roadtrip4me-web
+          working_directory: apps/web
+
+      - name: Set Fly secrets (Web)
+        run: |
+          fly secrets set --app roadtrip4me-web \
+            VITE_MAPBOX_TOKEN=${{ secrets.VITE_MAPBOX_TOKEN }} \
+            VITE_API_URL=https://roadtrip4me-api.fly.dev \
+            VITE_AUTH0_DOMAIN=${{ secrets.VITE_AUTH0_DOMAIN }} \
+            VITE_AUTH0_CLIENT_ID=${{ secrets.VITE_AUTH0_CLIENT_ID }} \
+            VITE_AUTH0_AUDIENCE=${{ secrets.VITE_AUTH0_AUDIENCE }}

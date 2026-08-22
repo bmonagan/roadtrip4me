@@ -4,7 +4,7 @@ import type {
   Trip,
   TripCollaborator,
   TripSummary,
-} from '@roadtrip4me/types';
+} from '../types';
 import type {
   Stop as StopModel,
   Trip as TripModel,

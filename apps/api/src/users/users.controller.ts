@@ -1,5 +1,5 @@
 import { Controller, Delete, Get } from '@nestjs/common';
-import type { User } from '@roadtrip4me/types';
+import type { User } from '../types';
 import { CurrentUser } from '../auth/current-user.decorator';
 import type { User as UserModel } from '../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';

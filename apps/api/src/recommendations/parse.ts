@@ -1,4 +1,4 @@
-import type { StopCategory } from '@roadtrip4me/types';
+import type { StopCategory } from '../types';
 
 export const STOP_CATEGORIES: StopCategory[] = [
   'restaurant',
