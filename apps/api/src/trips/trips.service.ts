@@ -109,7 +109,7 @@ export class TripsService {
     return toTrip(trip);
   }
 
-  async update(userId: string, id: string, dto: UpdateTripDto, isPremium: boolean): Promise<Trip> {
+  async update(userId: string, id: string, dto: UpdateTripDto, _isPremium: boolean): Promise<Trip> {
     await this.ensureTripAccess(userId, id);
 
     const updated = await this.prisma.trip.update({

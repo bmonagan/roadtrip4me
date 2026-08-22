@@ -10,9 +10,6 @@ import { ListTripsQueryDto } from './dto/list-trips-query.dto';
 import { UpdateTripDto } from './dto/update-trip.dto';
 import type { User as UserModel } from '../generated/prisma/client';
 
-const FREE_TRIP_LIMIT = 3;
-const FREE_STOP_LIMIT = 5;
-
 @Controller('trips')
 export class TripsController {
   constructor(private readonly tripsService: TripsService) {}
