@@ -1,11 +1,10 @@
 import { Body, Controller, Get, NotFoundException, Param, Post, UseGuards } from '@nestjs/common';
-import { InjectQueue } from '@nestjs/bullmq';
-import { Queue } from 'bullmq';
 import { Throttle } from '@nestjs/throttler';
 import { CurrentUserId } from '../auth/current-user.decorator';
 import { PremiumGuard } from '../auth/premium.guard';
 import { PrismaService } from '../prisma/prisma.service';
 import { RecommendationRequestDto } from './dto/recommendation-request.dto';
+import { RecommendationsService } from './recommendations.service';
 
 type RecommendationStatus =
   | { status: 'idle' }
@@ -18,42 +17,58 @@ type RecommendationStatus =
 export class RecommendationsController {
   constructor(
     private readonly prisma: PrismaService,
-    @InjectQueue('recommendations') private readonly recommendationsQueue: Queue
+    private readonly recommendationsService: RecommendationsService,
   ) {}
 
   @UseGuards(PremiumGuard)
   @Post(':tripId/recommendations')
-  async enqueue(
+  async request(
     @CurrentUserId() userId: string,
     @Param('tripId') tripId: string,
     @Body() dto: RecommendationRequestDto
-  ): Promise<{ jobId: string; status: string }> {
+  ): Promise<{ requestId: string; status: string }> {
     await this.ensureTripOwned(userId, tripId);
 
-    const jobId = `recommendations-${tripId}`;
-    const existing = await this.recommendationsQueue.getJob(jobId);
+    // Check for existing request
+    const existing = await this.prisma.recommendationRequest.findUnique({
+      where: { tripId },
+    });
+
     if (existing) {
-      const state = await existing.getState();
-      if (state === 'active' || state === 'waiting' || state === 'delayed') {
-        return { jobId, status: state };
+      if (existing.status === 'processing' || existing.status === 'pending') {
+        return { requestId: existing.id, status: existing.status };
       }
-      if (state === 'completed') {
-        // Re-request means refresh — drop the completed job so a fresh one runs.
-        await existing.remove();
-      }
+      // completed or failed — allow refresh
+      await this.prisma.recommendationRequest.delete({ where: { id: existing.id } });
     }
 
-    const job = await this.recommendationsQueue.add(
-      'generate-recommendations',
-      { userId, tripId, dto },
-      {
-        jobId,
-        removeOnComplete: { count: 5 },
-        removeOnFail: { count: 10 },
-      }
-    );
+    const req = await this.prisma.recommendationRequest.create({
+      data: {
+        tripId,
+        status: 'processing',
+      },
+    });
 
-    return { jobId: job.id!, status: 'queued' };
+    // Fire-and-forget background processing
+    setImmediate(async () => {
+      try {
+        const stops = await this.recommendationsService.recommend(userId, tripId, dto);
+        await this.prisma.recommendationRequest.update({
+          where: { id: req.id },
+          data: { status: 'completed', stops: JSON.parse(JSON.stringify(stops)) },
+        });
+      } catch (err) {
+        await this.prisma.recommendationRequest.update({
+          where: { id: req.id },
+          data: {
+            status: 'failed',
+            error: err instanceof Error ? err.message : String(err),
+          },
+        });
+      }
+    });
+
+    return { requestId: req.id, status: 'processing' };
   }
 
   @Get(':tripId/recommendations')
@@ -63,17 +78,21 @@ export class RecommendationsController {
   ): Promise<RecommendationStatus> {
     await this.ensureTripOwned(userId, tripId);
 
-    const job = await this.recommendationsQueue.getJob(`recommendations-${tripId}`);
-    if (!job) {
+    const req = await this.prisma.recommendationRequest.findUnique({
+      where: { tripId },
+    });
+
+    if (!req) {
       return { status: 'idle' };
     }
 
-    const state = await job.getState();
-    if (state === 'completed') {
-      return { status: 'completed', data: job.returnvalue };
+    if (req.status === 'completed') {
+      return { status: 'completed', data: req.stops };
     }
-    if (state === 'failed') {
-      return { status: 'failed', message: job.failedReason ?? undefined };
+    if (req.status === 'failed') {
+      const result: { status: 'failed'; message?: string } = { status: 'failed' };
+      if (req.error) result.message = req.error;
+      return result;
     }
     return { status: 'processing' };
   }

@@ -5,7 +5,7 @@ FROM oven/bun:1 AS build
 WORKDIR /app
 COPY . .
 RUN bun install --frozen-lockfile \
-  && bunx prisma generate \
+  && (cd apps/api && bunx prisma generate) \
   && bun run --cwd apps/api build
 
 FROM oven/bun:1-slim AS runtime

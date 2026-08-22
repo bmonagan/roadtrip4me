@@ -1,11 +1,11 @@
 # RoadTrip4Me Web — Fly.io configuration
-# Deploy: fly deploy --image ghcr.io/<repo>/roadtrip4me-web:<sha>
 
 app = "roadtrip4me-web"
 primary_region = "ord"
 
 [build]
   remote_only = true
+  dockerfile = "Dockerfile"
 
 [http_service]
   internal_port = 80

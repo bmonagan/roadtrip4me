@@ -1,6 +1,4 @@
 import { ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
-import { InjectQueue } from '@nestjs/bullmq';
-import { Queue } from 'bullmq';
 import type {
   PaginatedResponse,
   Trip,
@@ -16,7 +14,7 @@ import type {
 } from '../generated/prisma/client';
 import { mapStop } from '../common/mappers/stop.mapper';
 import { PrismaService } from '../prisma/prisma.service';
-import type { ComputeRouteJobData } from '../jobs/route.processor';
+import { GoogleMapsService } from '../maps/google-maps.service';
 import type { CreateTripDto } from './dto/create-trip.dto';
 import type { ListTripsQueryDto } from './dto/list-trips-query.dto';
 import type { PlaceDto } from './dto/create-trip.dto';
@@ -42,7 +40,7 @@ const FREE_STOP_LIMIT = 5;
 export class TripsService {
   constructor(
     private readonly prisma: PrismaService,
-    @InjectQueue('route') private readonly routeQueue: Queue
+    private readonly maps: GoogleMapsService,
   ) {}
 
   async create(userId: string, dto: CreateTripDto, isPremium: boolean): Promise<Trip> {
@@ -71,7 +69,7 @@ export class TripsService {
     });
 
     await this.setGeographyPoints(trip.id, dto.origin, dto.destination);
-    await this.enqueueRoute(trip.id);
+    await this.computeRoute(trip.id);
 
     return this.findOne(userId, trip.id);
   }
@@ -104,10 +102,8 @@ export class TripsService {
     const trip = await this.findAccessibleTrip(userId, id);
 
     // Lazy-fill the route for trips created before routing existed (e.g. seed).
-    // Route computation is async now — enqueue it (deduped by jobId) and let
-    // the frontend refetch once the worker persists the result.
     if (!trip.encodedPolyline) {
-      await this.enqueueRoute(id);
+      await this.computeRoute(id);
     }
 
     return toTrip(trip);
@@ -149,7 +145,7 @@ export class TripsService {
         dto.destination ??
         ({ label: updated.destLabel, lat: updated.destLat, lng: updated.destLng } as PlaceDto);
       await this.setGeographyPoints(updated.id, origin, destination);
-      await this.enqueueRoute(id);
+      await this.computeRoute(id);
     }
 
     return this.findOne(userId, id);
@@ -194,7 +190,7 @@ export class TripsService {
       await tx.tripStop.create({ data: { tripId, stopId, order: (last?.order ?? 0) + 1 } });
     });
 
-    await this.enqueueRoute(tripId);
+    await this.computeRoute(tripId);
     return this.findOne(userId, tripId);
   }
 
@@ -221,7 +217,7 @@ export class TripsService {
       throw new NotFoundException('Stop not on this trip');
     }
 
-    await this.enqueueRoute(tripId);
+    await this.computeRoute(tripId);
     return this.findOne(userId, tripId);
   }
 
@@ -245,7 +241,7 @@ export class TripsService {
       });
     });
 
-    await this.enqueueRoute(tripId);
+    await this.computeRoute(tripId);
     return this.findOne(userId, tripId);
   }
 
@@ -271,7 +267,7 @@ export class TripsService {
       throw new NotFoundException('Waypoint not found');
     }
 
-    await this.enqueueRoute(tripId);
+    await this.computeRoute(tripId);
     return this.findOne(userId, tripId);
   }
 
@@ -308,17 +304,44 @@ export class TripsService {
     return this.findOne(userId, tripId);
   }
 
-  // Enqueues a route computation for the trip. jobId is the trip id, so
-  // concurrent enqueues (e.g. every lazy read) collapse into a single job; a
-  // fresh job is created after a change or once the previous one completes.
-  private enqueueRoute(tripId: string): Promise<unknown> {
-    const data: ComputeRouteJobData = { tripId };
-    return this.routeQueue.add('compute-route', data, {
-      jobId: `route-${tripId}`,
-      attempts: 2,
-      backoff: { type: 'exponential', delay: 1000 },
-      removeOnComplete: true,
-      removeOnFail: { count: 100 },
+  // Computes the route synchronously and persists distance, duration, and polyline.
+  private async computeRoute(tripId: string): Promise<void> {
+    const trip = await this.prisma.trip.findUnique({
+      where: { id: tripId },
+      select: { originLat: true, originLng: true, destLat: true, destLng: true },
+    });
+    if (!trip) return;
+
+    const waypoints = await this.prisma.tripWaypoint.findMany({
+      where: { tripId },
+      orderBy: { order: 'asc' },
+      select: { lat: true, lng: true },
+    });
+
+    const stops = await this.prisma.tripStop.findMany({
+      where: { tripId },
+      orderBy: { order: 'asc' },
+      include: { stop: { select: { lat: true, lng: true } } },
+    });
+
+    const intermediates = [
+      ...waypoints.map((w) => ({ lat: w.lat, lng: w.lng })),
+      ...stops.map((s) => ({ lat: s.stop.lat, lng: s.stop.lng })),
+    ];
+    const route = await this.maps.getRoute(
+      { lat: trip.originLat, lng: trip.originLng },
+      { lat: trip.destLat, lng: trip.destLng },
+      intermediates,
+    );
+    if (!route) return;
+
+    await this.prisma.trip.update({
+      where: { id: tripId },
+      data: {
+        totalDistanceMeters: route.distanceMeters,
+        totalDurationSeconds: route.durationSeconds,
+        encodedPolyline: route.encodedPolyline,
+      },
     });
   }
 

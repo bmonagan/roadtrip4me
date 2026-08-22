@@ -113,10 +113,11 @@ model Trip {
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
 
-  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  waypoints   TripWaypoint[]
-  tripStops   TripStop[]
-  collaborators TripCollaborator[]
+  user                 User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  waypoints            TripWaypoint[]
+  tripStops            TripStop[]
+  collaborators        TripCollaborator[]
+  recommendationRequests RecommendationRequest[]
 
   // Most queries are "trips for this user, newest first"
   @@index([userId, createdAt(sort: Desc)])
@@ -282,4 +283,30 @@ model SavedStop {
   @@unique([userId, stopId])
   @@index([userId])
   @@map("saved_stops")
+}
+
+// ─── Recommendation Request ───────────────────────────────────────────────────
+// Tracks the state of an async AI recommendation generation request per trip.
+// One active request per trip at a time; completed results stored as JSONB.
+
+enum RecommendationStatus {
+  pending
+  processing
+  completed
+  failed
+}
+
+model RecommendationRequest {
+  id        String                 @id @default(cuid())
+  tripId    String
+  status    RecommendationStatus   @default(pending)
+  stops     Json?                 // RecommendedStop[] array on completion
+  error     String?               // Failure reason
+  createdAt DateTime               @default(now())
+  updatedAt DateTime               @updatedAt
+
+  trip    Trip    @relation(fields: [tripId], references: [id], onDelete: Cascade)
+
+  @@unique([tripId])              // One active request per trip
+  @@map("recommendation_requests")
 }

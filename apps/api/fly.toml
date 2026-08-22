@@ -1,11 +1,11 @@
 # RoadTrip4Me API — Fly.io configuration
-# Deploy: fly deploy --image ghcr.io/<repo>/roadtrip4me-api:<sha>
 
 app = "roadtrip4me-api"
 primary_region = "ord"
 
 [build]
-  remote_only = true
+  remote_only = false
+  dockerfile = "Dockerfile"
 
 [http_service]
   internal_port = 3000

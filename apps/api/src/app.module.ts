@@ -1,7 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ThrottlerModule } from '@nestjs/throttler';
-import { BullModule } from '@nestjs/bullmq';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { PrismaModule } from './prisma/prisma.module';
@@ -13,16 +12,12 @@ import { RecommendationsModule } from './recommendations/recommendations.module'
 import { UsersModule } from './users/users.module';
 import { AffiliateModule } from './affiliate/affiliate.module';
 import { BillingModule } from './billing/billing.module';
-import { redisConnection } from './jobs/redis.config';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: '.env',
-    }),
-    BullModule.forRoot({
-      connection: redisConnection(),
+      envFilePath: process.env.DATABASE_URL ? false : '.env',
     }),
     ThrottlerModule.forRoot([
       {

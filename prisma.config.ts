@@ -2,7 +2,9 @@ import path from 'node:path';
 import { config } from 'dotenv';
 import { defineConfig } from 'prisma/config';
 
-config({ path: path.join(import.meta.dirname, 'apps/api/.env') });
+if (!process.env.DATABASE_URL) {
+  config({ path: path.join(import.meta.dirname, 'apps/api/.env') });
+}
 
 export default defineConfig({
   schema: 'apps/api/prisma/schema.prisma',
@@ -11,6 +13,6 @@ export default defineConfig({
     seed: 'bun apps/api/prisma/seed.ts',
   },
   datasource: {
-    url: process.env['DATABASE_URL'],
+    url: process.env.DATABASE_URL || '',
   },
 });
