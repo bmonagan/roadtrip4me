@@ -24,6 +24,9 @@ jobs:
 
       - run: bun install --frozen-lockfile
 
+      - name: Generate Prisma client
+        run: bunx prisma generate --config apps/api/prisma.config.js
+
       - name: Typecheck
         run: bun run typecheck
 
