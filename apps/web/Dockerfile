@@ -7,6 +7,7 @@ WORKDIR /app
 COPY packages/types ./packages/types
 COPY package.docker.json package.json
 COPY tsconfig.json vite.config.ts index.html ./
+COPY public/ ./public/
 COPY src/ ./src/
 COPY nginx.conf ./
 
