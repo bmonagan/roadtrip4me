@@ -7,8 +7,8 @@ DONE:
 - Set up Auth0. [DONE - tenant dev-t5c7ke25qk6ebvx4.us.auth0.com, SPA app registered, auto-provisioning added, deploy pipeline passes VITE_* as build args, auth enforced (x-user-id ignored), AUTH_DISABLED=false. Signup verified: screen_hint=signup reaches Auth0 /u/signup.]
 - Signup page. [DONE - /signup route, header "Sign up" button when signed out, signup() triggers Auth0 with screen_hint=signup, cross-links with /login]
 - Clean up stale Fly secrets on API app. [DONE - removed REDIS_URL, SESSION_SECRET, AUTH0_CLIENT_ID, AUTH0_CLIENT_SECRET, AUTH0_JWKS_URL, MAPBOX_ACCESS_TOKEN, STRIPE_WEBHOOK_ENDPOINT_SECRET (old name)]
-- Stripe secrets. [DONE - valid live key set; STRIPE_PRICE_ID=price_1U4SW5H4CqZkjwkbD8Uh5maq ($54/yr, product default); STRIPE_WEBHOOK_SECRET=whsec_... set; webhook endpoint we_1U4bIUH4CqZkjwkb5EkRWPbO repointed from roadtrip4me.com to https://api.roadtrip4me.com/api/v1/billing/webhook]
+- Stripe secrets + billing. [DONE - valid live key; STRIPE_PRICE_ID=price_1U4SW5H4CqZkjwkbD8Uh5maq ($54/yr); STRIPE_WEBHOOK_SECRET set; webhook endpoint we_1U4bIUH4CqZkjwkb5EkRWPbO repointed to https://api.roadtrip4me.com/api/v1/billing/webhook. Fixed production bug: webhook used sync constructEvent() which fails on Bun (SubtleCryptoProvider) - now constructEventAsync. Verified: valid signed payload -> 201 {"received":true}.]
 
 NEXT:
-- Deploy corrected Stripe secrets to Fly (pending commit push), then verify billing/checkout + webhook end-to-end.
 - Create users in Auth0 / log in as alice@example.com + bob@example.com to confirm seeded data + premium link (auto-provisioning by email).
+- Test real premium checkout flow end-to-end (Go Premium -> Stripe -> webhook sets isPremium).
