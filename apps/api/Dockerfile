@@ -18,6 +18,7 @@ WORKDIR /app
 COPY --from=build --chown=appuser:appuser /app/node_modules ./node_modules
 COPY --from=build --chown=appuser:appuser /app/dist ./dist
 COPY --from=build --chown=appuser:appuser /app/prisma ./prisma
+COPY --from=build --chown=appuser:appuser /app/prisma.config.js ./prisma.config.js
 COPY --from=build --chown=appuser:appuser /app/package.json ./package.json
 
 USER appuser

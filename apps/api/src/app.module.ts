@@ -17,7 +17,9 @@ import { BillingModule } from './billing/billing.module';
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: process.env.DATABASE_URL ? false : '.env',
+      ...(process.env.DATABASE_URL
+        ? {}
+        : { envFilePath: '.env' as string | string[] }),
     }),
     ThrottlerModule.forRoot([
       {
