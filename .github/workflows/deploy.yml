@@ -56,8 +56,8 @@ jobs:
             STRIPE_PRICE_ID=${{ secrets.STRIPE_PRICE_ID }} \
             STRIPE_WEBHOOK_SECRET=${{ secrets.STRIPE_WEBHOOK_SECRET }} \
             GOOGLE_MAPS_API_KEY=${{ secrets.GOOGLE_MAPS_API_KEY }} \
-            APP_ORIGIN=https://roadtrip4me-web.fly.dev \
-            CORS_ORIGIN=https://roadtrip4me-web.fly.dev
+            APP_ORIGIN=https://roadtrip4me.com \
+            CORS_ORIGIN=https://roadtrip4me.com
 
   # ─── Deploy Web ───────────────────────────────────────────────────
   deploy-web:
@@ -76,7 +76,7 @@ jobs:
         run: |
           flyctl secrets set --app roadtrip4me-web \
             VITE_MAPBOX_TOKEN=${{ secrets.VITE_MAPBOX_TOKEN }} \
-            VITE_API_URL=https://roadtrip4me-api.fly.dev \
+            VITE_API_URL=https://api.roadtrip4me.com \
             VITE_AUTH0_DOMAIN=${{ secrets.VITE_AUTH0_DOMAIN }} \
             VITE_AUTH0_CLIENT_ID=${{ secrets.VITE_AUTH0_CLIENT_ID }} \
             VITE_AUTH0_AUDIENCE=${{ secrets.VITE_AUTH0_AUDIENCE }}
