@@ -13,10 +13,15 @@ import type {
 import { authStore } from '../auth/authStore';
 
 // TEMPORARY dev fallback: when no Auth0 token is present (local dev with auth
-// disabled on the API), requests are made as the seeded dev user. Remove once
+// disabled on the API), requests are made as a seeded dev user. The active dev
+// user is chosen on the /login page; falls back to the env default. Remove once
 // Auth0 is configured.
-const DEV_USER_ID = import.meta.env.VITE_DEV_USER_ID ?? 'user_alice';
+const DEV_USER_ID_DEFAULT = import.meta.env.VITE_DEV_USER_ID ?? 'user_alice';
 const API_BASE = `${import.meta.env.VITE_API_URL ?? ''}/api/v1`;
+
+function devUserId(): string {
+  return authStore.getDevUserId() ?? DEV_USER_ID_DEFAULT;
+}
 
 export class ApiError extends Error {
   readonly status: number;
@@ -36,7 +41,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
       'Content-Type': 'application/json',
       ...(token
         ? { Authorization: `Bearer ${token}` }
-        : { 'x-user-id': DEV_USER_ID }),
+        : { 'x-user-id': devUserId() }),
       ...(init?.headers ?? {}),
     },
   });

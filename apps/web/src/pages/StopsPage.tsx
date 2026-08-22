@@ -5,6 +5,7 @@ import { api } from '../lib/api';
 import { formatDistance, titleCase } from '../lib/format';
 import VoteButtons from '../components/VoteButtons';
 import AddToTrip from '../components/AddToTrip';
+import AddStopForm from '../components/AddStopForm';
 import LoadingBanner from '../components/LoadingBanner';
 
 const CATEGORIES = [
@@ -25,6 +26,7 @@ type NearbyStop = Stop & { distanceMeters: number };
 export default function StopsPage() {
   const [category, setCategory] = useState<string>('');
   const [query, setQuery] = useState<string>('');
+  const [showAddForm, setShowAddForm] = useState(false);
 
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ['stops', category, query],
@@ -33,7 +35,19 @@ export default function StopsPage() {
 
   return (
     <div className="page">
-      <h1>Stops</h1>
+      <div className="page-head">
+        <h1>Stops</h1>
+        <button
+          type="button"
+          className="btn primary"
+          onClick={() => setShowAddForm((v) => !v)}
+        >
+          {showAddForm ? 'Cancel' : '+ Add stop'}
+        </button>
+      </div>
+
+      {showAddForm && <AddStopForm onDone={() => setShowAddForm(false)} />}
+
       <div className="toolbar">
         <label className="muted">
           Category{' '}

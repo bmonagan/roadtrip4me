@@ -10,6 +10,7 @@ import TripFormPage from './pages/TripFormPage';
 import StopsPage from './pages/StopsPage';
 import HomePage from './pages/HomePage';
 import CallbackPage from './pages/CallbackPage';
+import LoginPage from './pages/LoginPage';
 import LegalPage from './pages/LegalPage';
 import PremiumPage from './pages/PremiumPage';
 import CookieConsent from './components/CookieConsent';
@@ -67,6 +68,11 @@ export default function App() {
                   Log in
                 </button>
               ))}
+            {authMode === 'dev' && (
+              <Link to="/login" className="btn small">
+                {isAuthenticated ? 'Switch account' : 'Log in'}
+              </Link>
+            )}
           </div>
         </header>
         <Routes>
@@ -84,6 +90,7 @@ export default function App() {
                   <Route path="/terms" element={<LegalPage kind="terms" />} />
                   <Route path="/privacy" element={<LegalPage kind="privacy" />} />
                   <Route path="/auth/callback" element={<CallbackPage />} />
+                  <Route path="/login" element={<LoginPage />} />
                   <Route path="/premium" element={<PremiumPage />} />
                 </Routes>
               </main>

@@ -2,6 +2,11 @@
 // Auth0 access token without a React context.
 let token: string | null = localStorage.getItem('roadtrip4me.token');
 
+// Dev-mode fallback identity (used only when Auth0 is not configured). The
+// API trusts the x-user-id header while AUTH_DISABLED=true, so switching this
+// "logs in" as a different seeded user.
+let devUserId: string | null = localStorage.getItem('roadtrip4me.devUserId');
+
 const listeners = new Set<() => void>();
 
 export const authStore = {
@@ -12,6 +17,15 @@ export const authStore = {
     token = next;
     if (next) localStorage.setItem('roadtrip4me.token', next);
     else localStorage.removeItem('roadtrip4me.token');
+    listeners.forEach((l) => l());
+  },
+  getDevUserId(): string | null {
+    return devUserId;
+  },
+  setDevUserId(next: string | null): void {
+    devUserId = next;
+    if (next) localStorage.setItem('roadtrip4me.devUserId', next);
+    else localStorage.removeItem('roadtrip4me.devUserId');
     listeners.forEach((l) => l());
   },
   subscribe(listener: () => void): () => void {
