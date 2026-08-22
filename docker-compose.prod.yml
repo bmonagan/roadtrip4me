@@ -1,4 +1,4 @@
-# Production compose — Postgres, Redis, API, and web (nginx) on one origin.
+# Production compose — Postgres, API, and web (nginx) on one origin.
 # Usage:
 #   cp .env.prod.example .env.prod   # fill in values
 #   docker compose -f docker-compose.prod.yml up -d --build
@@ -20,29 +20,17 @@ services:
       timeout: 5s
       retries: 5
 
-  redis:
-    image: redis:7-alpine
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  api:
-    build:
-      context: .
-      dockerfile: apps/api/Dockerfile
-    restart: unless-stopped
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    env_file: .env.prod
-    environment:
-      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-postgres}@postgres:5432/roadtrip4me
-      REDIS_URL: redis://redis:6379
+   api:
+     build:
+       context: .
+       dockerfile: apps/api/Dockerfile
+     restart: unless-stopped
+     depends_on:
+       postgres:
+         condition: service_healthy
+     env_file: .env.prod
+     environment:
+       DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-postgres}@postgres:5432/roadtrip4me
 
   web:
     build:
