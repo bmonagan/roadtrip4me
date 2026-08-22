@@ -92,7 +92,7 @@ export class BillingController {
 
     let event: Stripe.Event;
     try {
-      event = this.client(secretKey).webhooks.constructEvent(
+      event = await this.client(secretKey).webhooks.constructEventAsync(
         req.rawBody as Buffer,
         signature,
         webhookSecret
