@@ -58,11 +58,21 @@ export class AuthService implements OnModuleDestroy {
 
   private async verifyToken(token: string): Promise<VerifiedToken> {
     const domain = process.env['AUTH0_DOMAIN'];
-    const audience = process.env['AUTH0_AUDIENCE'];
     if (!domain) {
       throw new UnauthorizedException('Auth is not configured');
     }
 
+    // Auth0 issues opaque tokens (valid for /userinfo) when no audience is
+    // requested, and JWT access tokens when a custom API audience is used.
+    // Detect the format and validate accordingly.
+    const looksLikeJwt = token.split('.').length === 3;
+    return looksLikeJwt
+      ? this.verifyJwt(token, domain)
+      : this.verifyOpaque(token, domain);
+  }
+
+  private async verifyJwt(token: string, domain: string): Promise<VerifiedToken> {
+    const audience = process.env['AUTH0_AUDIENCE'];
     try {
       const { payload } = await jose.jwtVerify(token, await this.getJwks(), {
         issuer: `https://${domain}/`,
@@ -80,6 +90,40 @@ export class AuthService implements OnModuleDestroy {
       };
     } catch (error) {
       this.logger.warn(`Token verification failed: ${(error as Error).message}`);
+      throw new UnauthorizedException('Invalid or expired token');
+    }
+  }
+
+  /**
+   * Validates an opaque Auth0 access token against the /userinfo endpoint and
+   * resolves the returned profile. Opaque tokens cannot be verified locally, so
+   * Auth0 itself confirms validity by returning the associated user claims.
+   */
+  private async verifyOpaque(token: string, domain: string): Promise<VerifiedToken> {
+    try {
+      const res = await fetch(`https://${domain}/userinfo`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) {
+        this.logger.warn(`userinfo failed: ${res.status}`);
+        throw new UnauthorizedException('Invalid or expired token');
+      }
+      const profile = (await res.json()) as Record<string, unknown>;
+      const authId = typeof profile.sub === 'string' ? profile.sub : null;
+      if (!authId) {
+        throw new UnauthorizedException('Token has no subject');
+      }
+      return {
+        authId,
+        email: typeof profile.email === 'string' ? profile.email : null,
+        name: typeof profile.name === 'string' ? profile.name : null,
+        picture: typeof profile.picture === 'string' ? profile.picture : null,
+      };
+    } catch (error) {
+      if (error instanceof UnauthorizedException) {
+        throw error;
+      }
+      this.logger.warn(`userinfo request failed: ${(error as Error).message}`);
       throw new UnauthorizedException('Invalid or expired token');
     }
   }

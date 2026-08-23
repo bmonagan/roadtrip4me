@@ -124,4 +124,58 @@ describe('AuthService (auth enabled)', () => {
       service['resolveAccount']({ authId: 'auth0|ghost' })
     ).rejects.toThrow(UnauthorizedException);
   });
+
+  describe('opaque token (no audience)', () => {
+    function mockFetchOk(profile: Record<string, unknown>) {
+      const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: () => profile });
+      vi.stubGlobal('fetch', fetchMock);
+      return fetchMock;
+    }
+
+    it('resolves an opaque token via /userinfo and provisions the user', async () => {
+      setAuthEnabled();
+      const fetchMock = mockFetchOk({
+        sub: 'auth0|opaque123',
+        email: 'opaque@example.com',
+        name: 'Opaque User',
+        picture: 'https://example.com/pic.png',
+      });
+      const { service, prisma } = makeService();
+      prisma.user.findUnique.mockResolvedValue(null);
+      prisma.user.create.mockResolvedValue({ id: 'u_opaque', authId: 'auth0|opaque123' });
+
+      const user = await service.resolve('Bearer someopaquevalue', undefined);
+      expect(user.id).toBe('u_opaque');
+      expect(fetchMock).toHaveBeenCalledWith(
+        'https://dev-tenant.us.auth0.com/userinfo',
+        { headers: { Authorization: 'Bearer someopaquevalue' } }
+      );
+      expect(prisma.user.create).toHaveBeenCalledWith({
+        data: {
+          authId: 'auth0|opaque123',
+          email: 'opaque@example.com',
+          displayName: 'Opaque User',
+          avatarUrl: 'https://example.com/pic.png',
+        },
+      });
+    });
+
+    it('rejects an opaque token when /userinfo returns non-OK', async () => {
+      setAuthEnabled();
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 401 }));
+      const { service } = makeService();
+      await expect(service.resolve('Bearer badopaque', undefined)).rejects.toThrow(
+        UnauthorizedException
+      );
+    });
+
+    it('rejects an opaque token with no sub claim', async () => {
+      setAuthEnabled();
+      mockFetchOk({ email: 'missing@example.com' });
+      const { service } = makeService();
+      await expect(service.resolve('Bearer opaque_nosub', undefined)).rejects.toThrow(
+        UnauthorizedException
+      );
+    });
+  });
 });
