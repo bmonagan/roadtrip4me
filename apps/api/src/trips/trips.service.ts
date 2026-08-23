@@ -99,14 +99,7 @@ export class TripsService {
   }
 
   async findOne(userId: string, id: string): Promise<Trip> {
-    const trip = await this.findAccessibleTrip(userId, id);
-
-    // Lazy-fill the route for trips created before routing existed (e.g. seed).
-    if (!trip.encodedPolyline) {
-      await this.computeRoute(id);
-    }
-
-    return toTrip(trip);
+    return toTrip(await this.findAccessibleTrip(userId, id));
   }
 
   async update(userId: string, id: string, dto: UpdateTripDto, _isPremium: boolean): Promise<Trip> {

@@ -1,15 +1,17 @@
-import { useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import type { Trip } from '@roadtrip4me/types';
 import { api, type TripPlace } from '../lib/api';
 import { formatDate, formatDuration, titleCase } from '../lib/format';
-import TripMap from '../components/TripMap';
 import Recommendations from '../components/Recommendations';
 import PlaceSearch from '../components/PlaceSearch';
 import ShareSection from '../components/ShareSection';
 import Accommodations from '../components/Accommodations';
 import LoadingBanner from '../components/LoadingBanner';
+
+// mapbox-gl is ~1MB; load it only when a trip is actually displayed.
+const TripMap = lazy(() => import('../components/TripMap'));
 
 const ROUTE_POLL_MS = 1500;
 const ROUTE_POLL_MAX = 20;
@@ -120,7 +122,9 @@ export default function TripDetailPage() {
         )}
       </header>
 
-      <TripMap trip={trip} />
+      <Suspense fallback={<div className="map-loading">Loading map…</div>}>
+        <TripMap trip={trip} />
+      </Suspense>
 
       <WaypointsSection
         trip={trip}

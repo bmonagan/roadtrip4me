@@ -1,22 +1,26 @@
+import { lazy, Suspense } from 'react';
 import { NavLink, Link, Route, Routes, useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
 import { useAuth } from './auth/AuthContext';
 import { api } from './lib/api';
 import { ToastProvider } from './lib/useToast';
-import TripsPage from './pages/TripsPage';
-import TripDetailPage from './pages/TripDetailPage';
-import TripFormPage from './pages/TripFormPage';
-import StopsPage from './pages/StopsPage';
 import HomePage from './pages/HomePage';
-import CallbackPage from './pages/CallbackPage';
-import AccountPage from './pages/AccountPage';
-import LoginPage from './pages/LoginPage';
-import SignupPage from './pages/SignupPage';
-import LegalPage from './pages/LegalPage';
-import PremiumPage from './pages/PremiumPage';
 import CookieConsent from './components/CookieConsent';
 import ToastContainer from './components/ToastContainer';
+
+// Route-level code splitting: each page (and its heavy deps like mapbox-gl)
+// loads only when navigated to, keeping the initial bundle small.
+const TripsPage = lazy(() => import('./pages/TripsPage'));
+const TripDetailPage = lazy(() => import('./pages/TripDetailPage'));
+const TripFormPage = lazy(() => import('./pages/TripFormPage'));
+const StopsPage = lazy(() => import('./pages/StopsPage'));
+const CallbackPage = lazy(() => import('./pages/CallbackPage'));
+const AccountPage = lazy(() => import('./pages/AccountPage'));
+const LoginPage = lazy(() => import('./pages/LoginPage'));
+const SignupPage = lazy(() => import('./pages/SignupPage'));
+const LegalPage = lazy(() => import('./pages/LegalPage'));
+const PremiumPage = lazy(() => import('./pages/PremiumPage'));
 
 export default function App() {
   const queryClient = useQueryClient();
@@ -82,20 +86,28 @@ export default function App() {
             path="*"
             element={
               <main className="site-main">
-                <Routes>
-                  <Route path="/trips" element={<TripsPage />} />
-                  <Route path="/trips/new" element={<TripFormPage />} />
-                  <Route path="/trips/:id" element={<TripDetailPage />} />
-                  <Route path="/trips/:id/edit" element={<TripFormPage />} />
-                  <Route path="/stops" element={<StopsPage />} />
-                  <Route path="/terms" element={<LegalPage kind="terms" />} />
-                  <Route path="/privacy" element={<LegalPage kind="privacy" />} />
-                  <Route path="/auth/callback" element={<CallbackPage />} />
-                  <Route path="/account" element={<AccountPage />} />
-                  <Route path="/login" element={<LoginPage />} />
-                  <Route path="/signup" element={<SignupPage />} />
-                  <Route path="/premium" element={<PremiumPage />} />
-                </Routes>
+                <Suspense
+                  fallback={
+                    <div className="page">
+                      <p className="muted">Loading…</p>
+                    </div>
+                  }
+                >
+                  <Routes>
+                    <Route path="/trips" element={<TripsPage />} />
+                    <Route path="/trips/new" element={<TripFormPage />} />
+                    <Route path="/trips/:id" element={<TripDetailPage />} />
+                    <Route path="/trips/:id/edit" element={<TripFormPage />} />
+                    <Route path="/stops" element={<StopsPage />} />
+                    <Route path="/terms" element={<LegalPage kind="terms" />} />
+                    <Route path="/privacy" element={<LegalPage kind="privacy" />} />
+                    <Route path="/auth/callback" element={<CallbackPage />} />
+                    <Route path="/account" element={<AccountPage />} />
+                    <Route path="/login" element={<LoginPage />} />
+                    <Route path="/signup" element={<SignupPage />} />
+                    <Route path="/premium" element={<PremiumPage />} />
+                  </Routes>
+                </Suspense>
               </main>
             }
           />
