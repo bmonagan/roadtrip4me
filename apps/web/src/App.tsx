@@ -1,7 +1,6 @@
 import { NavLink, Link, Route, Routes, useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
-import { useAuth } from './auth/AuthContext';
 import { api } from './lib/api';
 import { ToastProvider } from './lib/useToast';
 import TripsPage from './pages/TripsPage';
@@ -10,6 +9,7 @@ import TripFormPage from './pages/TripFormPage';
 import StopsPage from './pages/StopsPage';
 import HomePage from './pages/HomePage';
 import CallbackPage from './pages/CallbackPage';
+import AccountPage from './pages/AccountPage';
 import LoginPage from './pages/LoginPage';
 import SignupPage from './pages/SignupPage';
 import LegalPage from './pages/LegalPage';
@@ -18,7 +18,6 @@ import CookieConsent from './components/CookieConsent';
 import ToastContainer from './components/ToastContainer';
 
 export default function App() {
-  const { isAuthenticated, authMode, logout } = useAuth();
   const queryClient = useQueryClient();
   const [searchParams] = useSearchParams();
 
@@ -51,34 +50,17 @@ export default function App() {
             <NavLink to="/stops">Stops</NavLink>
           </nav>
           <div className="site-auth">
-            {me?.isPremium ? (
-              <span className="badge premium">⭐ Premium</span>
-            ) : (
-              isAuthenticated &&
-              authMode === 'auth0' && (
-                <Link to="/premium" className="btn small">Go Premium</Link>
-              )
-            )}
-            {authMode === 'auth0' &&
-              (isAuthenticated ? (
-                <button type="button" className="btn small" onClick={logout}>
-                  Log out
-                </button>
+            {me?.isPremium && <span className="badge premium">⭐ Premium</span>}
+            <Link to="/account" className="btn small account-link">
+              {me?.avatarUrl ? (
+                <img src={me.avatarUrl} alt="" className="account-avatar-sm" />
               ) : (
-                <>
-                  <Link to="/signup" className="btn small">
-                    Sign up
-                  </Link>
-                  <Link to="/login" className="btn small primary">
-                    Log in
-                  </Link>
-                </>
-              ))}
-            {authMode === 'dev' && (
-              <Link to="/login" className="btn small">
-                {isAuthenticated ? 'Switch account' : 'Log in'}
-              </Link>
-            )}
+                <span className="account-avatar-sm account-avatar-fallback-sm">
+                  {(me?.displayName ?? me?.email ?? 'A').charAt(0).toUpperCase()}
+                </span>
+              )}
+              <span>Account</span>
+            </Link>
           </div>
         </header>
         <Routes>
@@ -96,6 +78,7 @@ export default function App() {
                   <Route path="/terms" element={<LegalPage kind="terms" />} />
                   <Route path="/privacy" element={<LegalPage kind="privacy" />} />
                   <Route path="/auth/callback" element={<CallbackPage />} />
+                  <Route path="/account" element={<AccountPage />} />
                   <Route path="/login" element={<LoginPage />} />
                   <Route path="/signup" element={<SignupPage />} />
                   <Route path="/premium" element={<PremiumPage />} />
