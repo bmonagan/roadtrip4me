@@ -98,12 +98,30 @@ export class AuthService implements OnModuleDestroy {
    * Validates an opaque Auth0 access token against the /userinfo endpoint and
    * resolves the returned profile. Opaque tokens cannot be verified locally, so
    * Auth0 itself confirms validity by returning the associated user claims.
+   *
+   * Results are cached briefly in memory to avoid an external round-trip on
+   * every request. Cache entries have no expiry benefit beyond the 24h token
+   * lifetime, so a short TTL keeps revocation latency low while cutting call
+   * volume dramatically for bursty traffic.
    */
+  private static readonly USERINFO_TTL_MS = 60_000;
+  private static readonly USERINFO_CACHE_MAX = 10_000;
+  private readonly userinfoCache = new Map<string, { at: number; data: VerifiedToken }>();
+
   private async verifyOpaque(token: string, domain: string): Promise<VerifiedToken> {
+    const cached = this.userinfoCache.get(token);
+    if (cached && Date.now() - cached.at < AuthService.USERINFO_TTL_MS) {
+      return cached.data;
+    }
+
     try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 5_000);
       const res = await fetch(`https://${domain}/userinfo`, {
         headers: { Authorization: `Bearer ${token}` },
+        signal: controller.signal,
       });
+      clearTimeout(timeout);
       if (!res.ok) {
         this.logger.warn(`userinfo failed: ${res.status}`);
         throw new UnauthorizedException('Invalid or expired token');
@@ -113,12 +131,19 @@ export class AuthService implements OnModuleDestroy {
       if (!authId) {
         throw new UnauthorizedException('Token has no subject');
       }
-      return {
+      const data: VerifiedToken = {
         authId,
         email: typeof profile.email === 'string' ? profile.email : null,
         name: typeof profile.name === 'string' ? profile.name : null,
         picture: typeof profile.picture === 'string' ? profile.picture : null,
       };
+      this.userinfoCache.set(token, { at: Date.now(), data });
+      // Keep the cache bounded — drop the oldest entries when it grows too big.
+      if (this.userinfoCache.size > AuthService.USERINFO_CACHE_MAX) {
+        const oldest = this.userinfoCache.keys().next().value;
+        if (oldest) this.userinfoCache.delete(oldest);
+      }
+      return data;
     } catch (error) {
       if (error instanceof UnauthorizedException) {
         throw error;
@@ -173,5 +198,6 @@ export class AuthService implements OnModuleDestroy {
 
   async onModuleDestroy() {
     this.jwks = null;
+    this.userinfoCache.clear();
   }
 }

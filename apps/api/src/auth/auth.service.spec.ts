@@ -148,7 +148,7 @@ describe('AuthService (auth enabled)', () => {
       expect(user.id).toBe('u_opaque');
       expect(fetchMock).toHaveBeenCalledWith(
         'https://dev-tenant.us.auth0.com/userinfo',
-        { headers: { Authorization: 'Bearer someopaquevalue' } }
+        expect.objectContaining({ headers: { Authorization: 'Bearer someopaquevalue' } })
       );
       expect(prisma.user.create).toHaveBeenCalledWith({
         data: {
@@ -176,6 +176,31 @@ describe('AuthService (auth enabled)', () => {
       await expect(service.resolve('Bearer opaque_nosub', undefined)).rejects.toThrow(
         UnauthorizedException
       );
+    });
+
+    it('caches userinfo results so repeated requests skip the external call', async () => {
+      setAuthEnabled();
+      const fetchMock = mockFetchOk({ sub: 'auth0|cached', email: 'c@example.com' });
+      const { service, prisma } = makeService();
+      prisma.user.findUnique.mockResolvedValue({ id: 'u_cached', authId: 'auth0|cached' });
+
+      await service.resolve('Bearer sametoken', undefined);
+      await service.resolve('Bearer sametoken', undefined);
+      await service.resolve('Bearer sametoken', undefined);
+
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+    });
+
+    it('passes an abort signal (timeout) to the userinfo fetch', async () => {
+      setAuthEnabled();
+      const fetchMock = mockFetchOk({ sub: 'auth0|sig', email: 's@example.com' });
+      const { service, prisma } = makeService();
+      prisma.user.findUnique.mockResolvedValue({ id: 'u_sig', authId: 'auth0|sig' });
+
+      await service.resolve('Bearer sigtoken', undefined);
+      const [url, opts] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
+      expect(url).toBe('https://dev-tenant.us.auth0.com/userinfo');
+      expect(opts.signal).toBeInstanceOf(AbortSignal);
     });
   });
 });
