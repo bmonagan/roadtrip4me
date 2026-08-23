@@ -1,6 +1,7 @@
 import { NavLink, Link, Route, Routes, useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
+import { useAuth } from './auth/AuthContext';
 import { api } from './lib/api';
 import { ToastProvider } from './lib/useToast';
 import TripsPage from './pages/TripsPage';
@@ -20,6 +21,7 @@ import ToastContainer from './components/ToastContainer';
 export default function App() {
   const queryClient = useQueryClient();
   const [searchParams] = useSearchParams();
+  const { authMode, isAuthenticated } = useAuth();
 
   const { data: me } = useQuery({
     queryKey: ['me'],
@@ -51,16 +53,27 @@ export default function App() {
           </nav>
           <div className="site-auth">
             {me?.isPremium && <span className="badge premium">⭐ Premium</span>}
-            <Link to="/account" className="btn small account-link">
-              {me?.avatarUrl ? (
-                <img src={me.avatarUrl} alt="" className="account-avatar-sm" />
-              ) : (
-                <span className="account-avatar-sm account-avatar-fallback-sm">
-                  {(me?.displayName ?? me?.email ?? 'A').charAt(0).toUpperCase()}
-                </span>
-              )}
-              <span>Account</span>
-            </Link>
+            {isAuthenticated ? (
+              <Link to="/account" className="btn small account-link">
+                {me?.avatarUrl ? (
+                  <img src={me.avatarUrl} alt="" className="account-avatar-sm" />
+                ) : (
+                  <span className="account-avatar-sm account-avatar-fallback-sm">
+                    {(me?.displayName ?? me?.email ?? 'A').charAt(0).toUpperCase()}
+                  </span>
+                )}
+                <span>Account</span>
+              </Link>
+            ) : authMode === 'auth0' ? (
+              <>
+                <Link to="/signup" className="btn small">
+                  Sign up
+                </Link>
+                <Link to="/login" className="btn small primary">
+                  Log in
+                </Link>
+              </>
+            ) : null}
           </div>
         </header>
         <Routes>
