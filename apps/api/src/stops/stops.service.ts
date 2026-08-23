@@ -93,29 +93,33 @@ export class StopsService {
   }
 
   async create(userId: string, dto: CreateStopDto): Promise<Stop> {
-    const stop = await this.prisma.stop.create({
-      data: {
-        name: dto.name,
-        category: dto.category,
-        lat: dto.coordinates.lat,
-        lng: dto.coordinates.lng,
-        city: dto.address.city,
-        state: dto.address.state,
-        submittedByUserId: userId,
-        ...(dto.description !== undefined && { description: dto.description }),
-        ...(dto.imageUrl !== undefined && { imageUrl: dto.imageUrl }),
-        ...(dto.address.street !== undefined && { street: dto.address.street }),
-        ...(dto.address.country !== undefined && { country: dto.address.country }),
-        ...(dto.address.postalCode !== undefined && { postalCode: dto.address.postalCode }),
-      },
-    });
+    // Insert the row and set the PostGIS geography column in one transaction so
+    // a failed spatial write can't leave a committed stop with a NULL location.
+    return this.prisma.$transaction(async (tx) => {
+      const stop = await tx.stop.create({
+        data: {
+          name: dto.name,
+          category: dto.category,
+          lat: dto.coordinates.lat,
+          lng: dto.coordinates.lng,
+          city: dto.address.city,
+          state: dto.address.state,
+          submittedByUserId: userId,
+          ...(dto.description !== undefined && { description: dto.description }),
+          ...(dto.imageUrl !== undefined && { imageUrl: dto.imageUrl }),
+          ...(dto.address.street !== undefined && { street: dto.address.street }),
+          ...(dto.address.country !== undefined && { country: dto.address.country }),
+          ...(dto.address.postalCode !== undefined && { postalCode: dto.address.postalCode }),
+        },
+      });
 
-    await this.prisma.$executeRaw`
-      UPDATE stops SET
-        location = ST_SetSRID(ST_Point(${dto.coordinates.lng}, ${dto.coordinates.lat}), 4326)::geography
-      WHERE id = ${stop.id}
-    `;
+      await tx.$executeRaw`
+        UPDATE stops SET
+          location = ST_SetSRID(ST_Point(${dto.coordinates.lng}, ${dto.coordinates.lat}), 4326)::geography
+        WHERE id = ${stop.id}
+      `;
 
-    return mapStop(stop);
+      return stop;
+    }).then((stop) => mapStop(stop));
   }
 }

@@ -88,34 +88,36 @@ export class RecommendationsController {
     return { requestId: req.id, status: 'processing' };
   }
 
-  // Enforces the per-user daily budget, atomically resetting the counter when
-  // the day changes. Throws when the user is out of budget.
+  // Enforces the per-user daily budget atomically: a single conditional UPDATE
+  // increments the counter (resetting on a new day) under the row lock, and
+  // only matches when the resulting count is within the limit. Concurrent
+  // requests can't both read the same count and exceed the cap.
   private async consumeDailyBudget(user: UserModel): Promise<void> {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    const dayOfCount =
-      user.recommendationCountDay instanceof Date
-        ? new Date(user.recommendationCountDay)
-        : null;
-    const sameDay =
-      dayOfCount !== null &&
-      dayOfCount.getTime() === today.getTime();
+    const rows = await this.prisma.$queryRaw<{ recommendationCount: number }[]>`
+      UPDATE users
+      SET
+        "recommendationCount" = CASE
+          WHEN "recommendationCountDay" = ${today}::date THEN "recommendationCount" + 1
+          ELSE 1
+        END,
+        "recommendationCountDay" = ${today}::date
+      WHERE id = ${user.id}
+        AND (
+          "recommendationCountDay" IS NULL
+          OR "recommendationCountDay" <> ${today}::date
+          OR "recommendationCount" < ${DAILY_RECOMMENDATION_LIMIT}
+        )
+      RETURNING "recommendationCount"
+    `;
 
-    const nextCount = sameDay ? user.recommendationCount + 1 : 1;
-    if (nextCount > DAILY_RECOMMENDATION_LIMIT) {
+    if (rows.length === 0) {
       throw new ForbiddenException(
         `You've reached your daily limit of ${DAILY_RECOMMENDATION_LIMIT} AI recommendation runs. Try again tomorrow.`
       );
     }
-
-    await this.prisma.user.update({
-      where: { id: user.id },
-      data: {
-        recommendationCount: nextCount,
-        recommendationCountDay: sameDay ? user.recommendationCountDay : today,
-      },
-    });
   }
 
   @Get(':tripId/recommendations')

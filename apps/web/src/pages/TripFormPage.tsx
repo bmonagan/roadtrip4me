@@ -93,6 +93,7 @@ export default function TripFormPage() {
           }),
     onSuccess: (saved) => {
       queryClient.invalidateQueries({ queryKey: ['trips'] });
+      queryClient.setQueryData(['trip', saved.id], saved);
       toast({ message: isEdit ? 'Trip updated' : 'Trip created', type: 'success' });
       navigate(`/trips/${saved.id}`);
     },

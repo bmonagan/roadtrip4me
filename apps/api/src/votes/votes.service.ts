@@ -12,6 +12,9 @@ export class VotesService {
     await this.ensureStopExists(stopId);
 
     await this.prisma.$transaction(async (tx) => {
+      // Serialize concurrent votes on the same stop by locking the stop row, so
+      // the denormalized score/voteCount recalculation can't lose updates.
+      await tx.$queryRaw`SELECT id FROM stops WHERE id = ${stopId} FOR UPDATE`;
       // One vote per user per stop: upsert on the unique (userId, stopId) so
       // casting again simply flips the vote direction instead of inserting a row.
       await tx.vote.upsert({
@@ -29,6 +32,7 @@ export class VotesService {
     const deleted = await this.prisma.$transaction(async (tx) => {
       const result = await tx.vote.deleteMany({ where: { userId, stopId } });
       if (result.count > 0) {
+        await tx.$queryRaw`SELECT id FROM stops WHERE id = ${stopId} FOR UPDATE`;
         await this.recalculateScore(tx, stopId);
       }
       return result;

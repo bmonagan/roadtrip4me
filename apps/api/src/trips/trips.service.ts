@@ -18,6 +18,7 @@ import type {
   TripVibe,
   TripWaypoint as TripWaypointModel,
 } from '../generated/prisma/client';
+import type { Prisma } from '../generated/prisma/client';
 import { mapStop } from '../common/mappers/stop.mapper';
 import { PrismaService } from '../prisma/prisma.service';
 import { GoogleMapsService } from '../maps/google-maps.service';
@@ -52,31 +53,36 @@ export class TripsService {
   ) {}
 
   async create(userId: string, dto: CreateTripDto, isPremium: boolean): Promise<Trip> {
-    if (!isPremium) {
-      const count = await this.prisma.trip.count({ where: { userId } });
-      if (count >= FREE_TRIP_LIMIT) {
-        throw new ForbiddenException(`Free accounts are limited to ${FREE_TRIP_LIMIT} trips. Upgrade to Premium for unlimited trips.`);
+    // Enforce the free-tier trip limit atomically: lock the user row so two
+    // concurrent creates can't both pass the count check.
+    const trip = await this.prisma.$transaction(async (tx) => {
+      if (!isPremium) {
+        await tx.$queryRaw`SELECT id FROM users WHERE id = ${userId} FOR UPDATE`;
+        const count = await tx.trip.count({ where: { userId } });
+        if (count >= FREE_TRIP_LIMIT) {
+          throw new ForbiddenException(`Free accounts are limited to ${FREE_TRIP_LIMIT} trips. Upgrade to Premium for unlimited trips.`);
+        }
       }
-    }
-
-    const trip = await this.prisma.trip.create({
-      data: {
-        userId,
-        title: dto.title,
-        originLabel: dto.origin.label,
-        originLat: dto.origin.lat,
-        originLng: dto.origin.lng,
-        destLabel: dto.destination.label,
-        destLat: dto.destination.lat,
-        destLng: dto.destination.lng,
-        ...(dto.status !== undefined && { status: dto.status }),
-        ...(dto.vibes !== undefined && { vibes: dto.vibes }),
-        ...(dto.startDate !== undefined && { startDate: new Date(dto.startDate) }),
-        ...(dto.endDate !== undefined && { endDate: new Date(dto.endDate) }),
-      },
+      const created = await tx.trip.create({
+        data: {
+          userId,
+          title: dto.title,
+          originLabel: dto.origin.label,
+          originLat: dto.origin.lat,
+          originLng: dto.origin.lng,
+          destLabel: dto.destination.label,
+          destLat: dto.destination.lat,
+          destLng: dto.destination.lng,
+          ...(dto.status !== undefined && { status: dto.status }),
+          ...(dto.vibes !== undefined && { vibes: dto.vibes }),
+          ...(dto.startDate !== undefined && { startDate: new Date(dto.startDate) }),
+          ...(dto.endDate !== undefined && { endDate: new Date(dto.endDate) }),
+        },
+      });
+      await this.setGeographyPoints(tx, created.id, dto.origin, dto.destination);
+      return created;
     });
 
-    await this.setGeographyPoints(trip.id, dto.origin, dto.destination);
     this.queueRouteComputation(trip.id);
 
     return this.findOne(userId, trip.id);
@@ -113,39 +119,57 @@ export class TripsService {
   async update(userId: string, id: string, dto: UpdateTripDto, _isPremium: boolean): Promise<Trip> {
     await this.ensureTripAccess(userId, id);
 
-    const updated = await this.prisma.trip.update({
-      where: { id },
-      data: {
-        ...(dto.title !== undefined && { title: dto.title }),
-        ...(dto.status !== undefined && { status: dto.status }),
-        ...(dto.vibes !== undefined && { vibes: dto.vibes as TripVibe[] }),
-        ...(dto.startDate !== undefined && { startDate: new Date(dto.startDate) }),
-        ...(dto.endDate !== undefined && { endDate: new Date(dto.endDate) }),
-        ...(dto.origin !== undefined && {
-          originLabel: dto.origin.label,
-          originLat: dto.origin.lat,
-          originLng: dto.origin.lng,
-        }),
-        ...(dto.destination !== undefined && {
-          destLabel: dto.destination.label,
-          destLat: dto.destination.lat,
-          destLng: dto.destination.lng,
-        }),
-      },
+    const originChanged = dto.origin !== undefined || dto.destination !== undefined;
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.trip.update({
+        where: { id },
+        data: {
+          ...(dto.title !== undefined && { title: dto.title }),
+          ...(dto.status !== undefined && { status: dto.status }),
+          ...(dto.vibes !== undefined && { vibes: dto.vibes as TripVibe[] }),
+          ...(dto.startDate !== undefined && { startDate: new Date(dto.startDate) }),
+          ...(dto.endDate !== undefined && { endDate: new Date(dto.endDate) }),
+          ...(dto.origin !== undefined && {
+            originLabel: dto.origin.label,
+            originLat: dto.origin.lat,
+            originLng: dto.origin.lng,
+          }),
+          ...(dto.destination !== undefined && {
+            destLabel: dto.destination.label,
+            destLat: dto.destination.lat,
+            destLng: dto.destination.lng,
+          }),
+        },
+      });
+
+      if (originChanged) {
+        const tripRow = await tx.trip.findUniqueOrThrow({
+          where: { id },
+          select: {
+            originLabel: true,
+            originLat: true,
+            originLng: true,
+            destLabel: true,
+            destLat: true,
+            destLng: true,
+          },
+        });
+        const origin: PlaceDto = dto.origin ?? {
+          label: tripRow.originLabel,
+          lat: tripRow.originLat,
+          lng: tripRow.originLng,
+        };
+        const destination: PlaceDto = dto.destination ?? {
+          label: tripRow.destLabel,
+          lat: tripRow.destLat,
+          lng: tripRow.destLng,
+        };
+        await this.setGeographyPoints(tx, id, origin, destination);
+      }
     });
 
-    if (dto.origin !== undefined || dto.destination !== undefined) {
-      const origin: PlaceDto =
-        dto.origin ??
-        ({
-          label: updated.originLabel,
-          lat: updated.originLat,
-          lng: updated.originLng,
-        } as PlaceDto);
-      const destination: PlaceDto =
-        dto.destination ??
-        ({ label: updated.destLabel, lat: updated.destLat, lng: updated.destLng } as PlaceDto);
-      await this.setGeographyPoints(updated.id, origin, destination);
+    if (originChanged) {
       this.queueRouteComputation(id);
     }
 
@@ -161,25 +185,29 @@ export class TripsService {
   async addStop(userId: string, tripId: string, stopId: string, isPremium: boolean): Promise<Trip> {
     await this.ensureTripAccess(userId, tripId);
 
-    if (!isPremium) {
-      const stopCount = await this.prisma.tripStop.count({ where: { tripId } });
-      if (stopCount >= FREE_STOP_LIMIT) {
-        throw new ForbiddenException(`Free accounts are limited to ${FREE_STOP_LIMIT} stops per trip. Upgrade to Premium for unlimited stops.`);
-      }
-    }
-
     const stop = await this.prisma.stop.findUnique({ where: { id: stopId }, select: { id: true } });
     if (!stop) {
       throw new NotFoundException(`Stop ${stopId} not found`);
     }
 
     await this.prisma.$transaction(async (tx) => {
+      // Serialize stop mutations per trip so the order computation and the
+      // free-tier stop limit can't race with a concurrent request.
+      await tx.$queryRaw`SELECT id FROM trips WHERE id = ${tripId} FOR UPDATE`;
+
       const existing = await tx.tripStop.findUnique({
         where: { tripId_stopId: { tripId, stopId } },
         select: { id: true },
       });
       if (existing) {
         throw new ConflictException('Stop already on this trip');
+      }
+
+      if (!isPremium) {
+        const stopCount = await tx.tripStop.count({ where: { tripId } });
+        if (stopCount >= FREE_STOP_LIMIT) {
+          throw new ForbiddenException(`Free accounts are limited to ${FREE_STOP_LIMIT} stops per trip. Upgrade to Premium for unlimited stops.`);
+        }
       }
 
       // order is unique per trip — append at the end.
@@ -226,6 +254,9 @@ export class TripsService {
     await this.ensureTripAccess(userId, tripId);
 
     await this.prisma.$transaction(async (tx) => {
+      // Serialize waypoint inserts per trip so the unique (tripId, order)
+      // constraint can't be violated by concurrent requests.
+      await tx.$queryRaw`SELECT id FROM trips WHERE id = ${tripId} FOR UPDATE`;
       const last = await tx.tripWaypoint.findFirst({
         where: { tripId },
         orderBy: { order: 'desc' },
@@ -362,9 +393,15 @@ export class TripsService {
   }
 
   // The geography columns are PostGIS-only and unsupported by Prisma, so they
-  // are written with raw SQL after the row is created/updated.
-  private setGeographyPoints(tripId: string, origin: PlaceDto, destination: PlaceDto) {
-    return this.prisma.$executeRaw`
+  // are written with raw SQL. Pass a transaction client so the point write is
+  // atomic with the row insert/update.
+  private setGeographyPoints(
+    client: Prisma.TransactionClient,
+    tripId: string,
+    origin: PlaceDto,
+    destination: PlaceDto
+  ) {
+    return client.$executeRaw`
       UPDATE trips SET
         "originPoint" = ST_SetSRID(ST_Point(${origin.lng}, ${origin.lat}), 4326)::geography,
         "destPoint"   = ST_SetSRID(ST_Point(${destination.lng}, ${destination.lat}), 4326)::geography

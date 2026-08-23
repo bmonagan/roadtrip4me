@@ -16,10 +16,22 @@ export default function PlaceSearch({ label, value, onSelect, error: validationE
   const [open, setOpen] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
+
+  // Keep the input in sync when a parent resets the value (e.g. a cleared
+  // waypoint/place selection) instead of showing a stale label. Adjusted during
+  // render per React's recommended "adjust state when a prop changes" pattern.
+  const [prevValueLabel, setPrevValueLabel] = useState(value?.label ?? '');
+  const valueLabel = value?.label ?? '';
+  if (valueLabel !== prevValueLabel) {
+    setPrevValueLabel(valueLabel);
+    setQuery(valueLabel);
+  }
 
   useEffect(() => {
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
+      abortRef.current?.abort();
     };
   }, []);
 
@@ -27,6 +39,7 @@ export default function PlaceSearch({ label, value, onSelect, error: validationE
     setQuery(text);
     setOpen(true);
     if (timerRef.current) clearTimeout(timerRef.current);
+    abortRef.current?.abort();
 
     if (text.trim().length < 2) {
       setResults([]);
@@ -34,10 +47,15 @@ export default function PlaceSearch({ label, value, onSelect, error: validationE
     }
 
     timerRef.current = setTimeout(async () => {
+      const controller = new AbortController();
+      abortRef.current = controller;
       try {
-        setResults(await geocode(text));
+        // Abort any earlier in-flight request so a slow response can't
+        // overwrite newer results (out-of-order race).
+        setResults(await geocode(text, controller.signal));
         setSearchError(null);
       } catch (e) {
+        if ((e as Error).name === 'AbortError') return;
         setSearchError((e as Error).message);
         setResults([]);
       }

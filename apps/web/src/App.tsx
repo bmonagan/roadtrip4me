@@ -1,7 +1,6 @@
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, useEffect, useRef } from 'react';
 import { NavLink, Link, Route, Routes, useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useEffect } from 'react';
 import { useAuth } from './auth/AuthContext';
 import { api } from './lib/api';
 import { ToastProvider } from './lib/useToast';
@@ -25,12 +24,15 @@ const PremiumPage = lazy(() => import('./pages/PremiumPage'));
 export default function App() {
   const queryClient = useQueryClient();
   const [searchParams] = useSearchParams();
-  const { authMode, isAuthenticated } = useAuth();
+  const { authMode, isAuthenticated, token } = useAuth();
 
   const { data: me } = useQuery({
     queryKey: ['me'],
     queryFn: () => api.users.me(),
+    // Refetch when the auth token changes (login/logout/switch user) so the
+    // header and premium badge always reflect the active identity.
     staleTime: Infinity,
+    enabled: isAuthenticated,
   });
 
   // After a successful Stripe checkout the user returns with ?upgraded=1.
@@ -42,6 +44,16 @@ export default function App() {
       window.history.replaceState({}, '', window.location.pathname);
     }
   }, [searchParams, queryClient]);
+
+  // Clear the cache when the auth identity changes so stale data from a
+  // previous user/login is never shown to the next one.
+  const prevToken = useRef(token);
+  useEffect(() => {
+    if (prevToken.current !== token) {
+      queryClient.clear();
+      prevToken.current = token;
+    }
+  }, [token, queryClient]);
 
   return (
     <ToastProvider>

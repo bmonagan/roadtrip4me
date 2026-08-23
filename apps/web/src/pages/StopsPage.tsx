@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import type { Stop } from '@roadtrip4me/types';
 import { api } from '../lib/api';
@@ -26,11 +26,19 @@ type NearbyStop = Stop & { distanceMeters: number };
 export default function StopsPage() {
   const [category, setCategory] = useState<string>('');
   const [query, setQuery] = useState<string>('');
+  // Debounced copy of `query` — the API request fires only after typing pauses,
+  // not on every keystroke.
+  const [debouncedQuery, setDebouncedQuery] = useState<string>('');
   const [showAddForm, setShowAddForm] = useState(false);
 
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedQuery(query), 350);
+    return () => clearTimeout(t);
+  }, [query]);
+
   const { data, isLoading, isError, error } = useQuery({
-    queryKey: ['stops', category, query],
-    queryFn: () => api.stops.list({ pageSize: 50, category, q: query }),
+    queryKey: ['stops', category, debouncedQuery],
+    queryFn: () => api.stops.list({ pageSize: 50, category, q: debouncedQuery }),
   });
 
   return (
