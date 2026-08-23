@@ -9,6 +9,7 @@ DONE:
 - Clean up stale Fly secrets on API app. [DONE - removed REDIS_URL, SESSION_SECRET, AUTH0_CLIENT_ID, AUTH0_CLIENT_SECRET, AUTH0_JWKS_URL, MAPBOX_ACCESS_TOKEN, STRIPE_WEBHOOK_ENDPOINT_SECRET (old name)]
 - Stripe secrets + billing. [DONE - valid live key; STRIPE_PRICE_ID=price_1U4SW5H4CqZkjwkbD8Uh5maq ($54/yr); STRIPE_WEBHOOK_SECRET set; webhook endpoint we_1U4bIUH4CqZkjwkb5EkRWPbO repointed to https://api.roadtrip4me.com/api/v1/billing/webhook. Fixed production bug: webhook used sync constructEvent() which fails on Bun (SubtleCryptoProvider) - now constructEventAsync. Verified: valid signed payload -> 201 {"received":true}.]
 - Fix "Unable to load subscription status" / all requests 401. [DONE - Auth0 issues OPAQUE access tokens when no audience is requested (not JWTs), so jose.jwtVerify() threw "Invalid Compact JWS" on every request. AuthService now detects token format: JWTs verified via tenant JWKS; opaque tokens validated against /userinfo and profile (sub/email/name/picture) feeds the same resolveAccount path. Deployed 30e6f7d. User can refresh (existing opaque token still valid).]
+- Login page improvements. [DONE - header Log in links to /login; login() sends prompt=login so Auth0 always shows its form (no silent auto-login via remembered session). Deployed 280ad3b.]
 
 NEXT:
 - User: refresh the app and confirm subscription status loads (opaque-token fix). Then log in as alice@example.com + bob@example.com to confirm seeded data + premium link (auto-provisioning by email).
