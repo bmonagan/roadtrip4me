@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { Stop } from '@roadtrip4me/types';
+import type { StopWithUserVote } from '@roadtrip4me/types';
 import VoteButtons from './VoteButtons';
 import { api } from '../lib/api';
 
@@ -11,7 +11,7 @@ vi.mock('../lib/api', () => ({
   },
 }));
 
-const stop: Stop = {
+const stop: StopWithUserVote = {
   id: 'stop_1',
   name: 'Blue Hole',
   description: null,
@@ -24,6 +24,7 @@ const stop: Stop = {
   voteCount: 3,
   submittedByUserId: null,
   createdAt: '2024-01-01T00:00:00.000Z',
+  userVote: null,
 };
 
 function renderWithQuery(ui: React.ReactElement) {

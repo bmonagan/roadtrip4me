@@ -8,7 +8,7 @@ export default function AddToTrip({ stopId }: { stopId: string }) {
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
 
-  const { data: trips } = useQuery({
+  const { data: trips, isLoading: tripsLoading, isError: tripsError } = useQuery({
     queryKey: ['trips'],
     queryFn: () => api.trips.list({ pageSize: 50 }),
   });
@@ -31,7 +31,11 @@ export default function AddToTrip({ stopId }: { stopId: string }) {
       {add.isPending && <span className="added">Adding…</span>}
       {open && !add.isPending && (
         <ul className="trip-picker">
-          {trips && trips.data.length === 0 && <li className="muted">No trips yet</li>}
+          {tripsLoading && <li className="muted">Loading trips…</li>}
+          {tripsError && <li className="error">Couldn't load trips.</li>}
+          {!tripsLoading && !tripsError && trips && trips.data.length === 0 && (
+            <li className="muted">No trips yet</li>
+          )}
           {(trips?.data ?? []).map((trip) => (
             <li key={trip.id}>
               <button type="button" onClick={() => add.mutate(trip.id)} disabled={add.isPending}>

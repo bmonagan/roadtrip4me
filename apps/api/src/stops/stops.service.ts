@@ -15,7 +15,10 @@ type NearbyStopRow = StopModel & { distanceMeters: number };
 export class StopsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findAll(query: ListStopsQueryDto): Promise<PaginatedResponse<Stop>> {
+  async findAll(
+    query: ListStopsQueryDto,
+    userId?: string
+  ): Promise<PaginatedResponse<StopWithUserVote>> {
     const where: Prisma.StopWhereInput = {
       ...(query.category !== undefined && { category: query.category }),
       ...(query.city !== undefined && { city: query.city }),
@@ -38,8 +41,19 @@ export class StopsService {
       }),
     ]);
 
+    // Batch-load the current user's votes for these stops so the UI can show
+    // which buttons are already active on first render.
+    const userVotes = new Map<string, 1 | -1>();
+    if (userId && stops.length > 0) {
+      const votes = await this.prisma.vote.findMany({
+        where: { userId, stopId: { in: stops.map((s) => s.id) } },
+        select: { stopId: true, value: true },
+      });
+      for (const v of votes) userVotes.set(v.stopId, v.value as 1 | -1);
+    }
+
     return {
-      data: stops.map(mapStop),
+      data: stops.map((s) => ({ ...mapStop(s), userVote: userVotes.get(s.id) ?? null })),
       total,
       page: query.page,
       pageSize: query.pageSize,

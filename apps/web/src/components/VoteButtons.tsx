@@ -4,9 +4,9 @@ import type { Stop } from '@roadtrip4me/types';
 import { api } from '../lib/api';
 import { useToast } from '../lib/useToast';
 
-export default function VoteButtons({ stop }: { stop: Stop }) {
+export default function VoteButtons({ stop }: { stop: Stop & { userVote?: 1 | -1 | null } }) {
   const queryClient = useQueryClient();
-  const [userVote, setUserVote] = useState<1 | -1 | null>(null);
+  const [userVote, setUserVote] = useState<1 | -1 | null>(stop.userVote ?? null);
   const { toast } = useToast();
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ['stops'] });
@@ -38,6 +38,7 @@ export default function VoteButtons({ stop }: { stop: Stop }) {
         type="button"
         className={`vote-btn${upActive ? ' active-up' : ''}`}
         aria-label="Upvote"
+        aria-pressed={upActive}
         onClick={() => (upActive ? remove.mutate() : cast.mutate(1))}
         disabled={cast.isPending || remove.isPending}
       >
@@ -52,6 +53,7 @@ export default function VoteButtons({ stop }: { stop: Stop }) {
         type="button"
         className={`vote-btn${downActive ? ' active-down' : ''}`}
         aria-label="Downvote"
+        aria-pressed={downActive}
         onClick={() => (downActive ? remove.mutate() : cast.mutate(-1))}
         disabled={cast.isPending || remove.isPending}
       >

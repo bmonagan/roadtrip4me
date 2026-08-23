@@ -32,10 +32,13 @@ export default function TripDetailPage() {
     enabled: !!id,
   });
 
-  // Route computation is async (BullMQ) — refetch until the polyline appears.
+  // Route computation is async — refetch until the polyline appears. The
+  // attempt counter resets whenever the trip id changes so switching trips
+  // doesn't carry over a stale count.
   const routePollAttempts = useRef(0);
   const hasRoute = Boolean(trip?.encodedPolyline);
   useEffect(() => {
+    routePollAttempts.current = 0;
     if (!id || hasRoute) return;
     const interval = setInterval(() => {
       if (routePollAttempts.current++ >= ROUTE_POLL_MAX) {
@@ -96,7 +99,11 @@ export default function TripDetailPage() {
             <button
               type="button"
               className="btn danger"
-              onClick={() => removeTrip.mutate()}
+              onClick={() => {
+                if (window.confirm(`Delete "${trip.title}"? This cannot be undone.`)) {
+                  removeTrip.mutate();
+                }
+              }}
               disabled={removeTrip.isPending}
             >
               {removeTrip.isPending ? 'Deleting…' : 'Delete'}
@@ -123,7 +130,7 @@ export default function TripDetailPage() {
       </header>
 
       <Suspense fallback={<div className="map-loading">Loading map…</div>}>
-        <TripMap trip={trip} />
+        <TripMap key={trip.id} trip={trip} />
       </Suspense>
 
       <WaypointsSection

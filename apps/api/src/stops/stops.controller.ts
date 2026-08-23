@@ -12,8 +12,8 @@ export class StopsController {
 
   @Public()
   @Get()
-  findAll(@Query() query: ListStopsQueryDto) {
-    return this.stopsService.findAll(query);
+  findAll(@Query() query: ListStopsQueryDto, @OptionalUserId() userId?: string) {
+    return this.stopsService.findAll(query, userId);
   }
 
   // Must be declared before @Get(':id') so 'nearby' isn't matched as an id.

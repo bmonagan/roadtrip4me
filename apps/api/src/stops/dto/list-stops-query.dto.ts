@@ -20,6 +20,7 @@ export class ListStopsQueryDto {
   @Type(() => Number)
   @IsInt()
   @Min(1)
+  @Max(100_000)
   page: number = 1;
 
   @IsOptional()

@@ -34,6 +34,20 @@ export const authStore = {
   },
 };
 
+// Keep auth state in sync across browser tabs: when another tab logs in/out or
+// switches dev user, this tab's store updates so the UI doesn't show stale data.
+if (typeof window !== 'undefined') {
+  window.addEventListener('storage', (event) => {
+    if (event.key === 'roadtrip4me.token') {
+      token = event.newValue;
+      listeners.forEach((l) => l());
+    } else if (event.key === 'roadtrip4me.devUserId') {
+      devUserId = event.newValue;
+      listeners.forEach((l) => l());
+    }
+  });
+}
+
 export const authConfig = {
   get domain(): string {
     return import.meta.env.VITE_AUTH0_DOMAIN ?? '';

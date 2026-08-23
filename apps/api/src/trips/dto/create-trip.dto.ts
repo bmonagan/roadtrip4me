@@ -13,6 +13,7 @@ import {
   ValidateNested,
 } from 'class-validator';
 import type { TripStatus, TripVibe } from '../../types';
+import { IsAfterDate } from '../../common/validators/is-after-date.validator';
 
 const TRIP_STATUSES = ['draft', 'planned', 'in_progress', 'completed'] as const;
 const TRIP_VIBES = ['scenic', 'foodie', 'adventure', 'historic', 'relaxed', 'family'] as const;
@@ -59,5 +60,6 @@ export class CreateTripDto {
 
   @IsOptional()
   @IsDateString()
+  @IsAfterDate('startDate', { message: 'endDate must be on or after startDate' })
   endDate?: string;
 }

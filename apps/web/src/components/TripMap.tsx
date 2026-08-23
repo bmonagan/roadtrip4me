@@ -33,9 +33,19 @@ export default function TripMap({ trip }: { trip: Trip }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
 
+  // Rebuild the map only when the route geometry actually changes (new polyline
+  // from background routing, stops added/removed), not on every refetch.
+  const routeSignature = `${trip.encodedPolyline ?? ''}|${trip.origin.lat},${trip.origin.lng}|${trip.destination.lat},${trip.destination.lng}|${trip.stops
+    .map((s) => `${s.coordinates.lat},${s.coordinates.lng}`)
+    .join(';')}`;
+
   useEffect(() => {
-    if (!containerRef.current || mapRef.current) return;
+    if (!containerRef.current) return;
     if (!MAPBOX_TOKEN) return;
+    if (mapRef.current) {
+      mapRef.current.remove();
+      mapRef.current = null;
+    }
 
     const map = new mapboxgl.Map({
       container: containerRef.current,
@@ -92,7 +102,7 @@ export default function TripMap({ trip }: { trip: Trip }) {
       map.remove();
       mapRef.current = null;
     };
-  }, [trip]);
+  }, [routeSignature]);
 
   if (!MAPBOX_TOKEN) {
     return <p className="muted">Add VITE_MAPBOX_TOKEN to apps/web/.env to see the map.</p>;
