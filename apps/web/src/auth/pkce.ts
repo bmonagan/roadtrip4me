@@ -31,6 +31,7 @@ export function buildAuthorizeUrl(opts: {
   state: string;
   codeChallenge: string;
   screenHint?: 'signup';
+  prompt?: 'login';
 }): string {
   const params = new URLSearchParams({
     response_type: 'code',
@@ -43,6 +44,7 @@ export function buildAuthorizeUrl(opts: {
   });
   if (opts.audience) params.set('audience', opts.audience);
   if (opts.screenHint) params.set('screen_hint', opts.screenHint);
+  if (opts.prompt) params.set('prompt', opts.prompt);
   return `https://${opts.domain}/authorize?${params.toString()}`;
 }
 

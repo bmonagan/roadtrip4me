@@ -18,7 +18,7 @@ import CookieConsent from './components/CookieConsent';
 import ToastContainer from './components/ToastContainer';
 
 export default function App() {
-  const { isAuthenticated, authMode, login, logout } = useAuth();
+  const { isAuthenticated, authMode, logout } = useAuth();
   const queryClient = useQueryClient();
   const [searchParams] = useSearchParams();
 
@@ -69,9 +69,9 @@ export default function App() {
                   <Link to="/signup" className="btn small">
                     Sign up
                   </Link>
-                  <button type="button" className="btn small primary" onClick={login}>
+                  <Link to="/login" className="btn small primary">
                     Log in
-                  </button>
+                  </Link>
                 </>
               ))}
             {authMode === 'dev' && (

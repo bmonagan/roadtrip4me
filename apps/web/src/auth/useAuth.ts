@@ -26,6 +26,8 @@ function startAuthFlow(screenHint?: 'signup'): void {
       codeChallenge,
       ...(authConfig.audience ? { audience: authConfig.audience } : {}),
       ...(screenHint ? { screenHint } : {}),
+      // Always show the Auth0 login form (no silent session auto-login).
+      prompt: 'login',
     });
     window.location.href = url;
   });
