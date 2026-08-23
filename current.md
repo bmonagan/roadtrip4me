@@ -14,8 +14,10 @@ DONE:
 - Login page improvements. [DONE - header Log in links to /login; login() sends prompt=login so Auth0 always shows its form (no silent auto-login via remembered session). Deployed 280ad3b.]
 - Account page. [DONE - header top-right shows an Account link (avatar/initial) instead of login/logout buttons. New /account page: profile, premium status, subscription management (Go Premium / Cancel), log out; dev mode shows identity picker; signed-out users get login/signup links. Deployed 41591be.]
 - Performance pass. [DONE - API: findOne() no longer lazily recomputes the paid Google Routes call for unrouted trips on every read (web already has a straight-line fallback). Web: code-split all routes via React.lazy, lazy-load TripMap so the ~1MB mapbox-gl only downloads when a trip is viewed, and drop ReactQueryDevtools from the prod bundle. Initial JS: 2.1MB (607KB gzip) -> 222KB (72KB gzip). Deployed d683cf3.]
+- Background route computation. [DONE - all write mutations (create/update/addStop/removeStop/addWaypoint/removeWaypoint) now queue route computation via setImmediate instead of awaiting the paid Google Routes call. Writes return immediately; web polls for the polyline. Deployed 10a34e1.]
+- AI recommendation budget cap. [DONE - per-user daily limit (10/day) on recommendation runs (DeepSeek + Places), enforced atomically in consumeDailyBudget(); counter resets at day rollover and rejects with 403 at the limit. Migration 0002 adds recommendationCount + recommendationCountDay. Deployed 10a34e1.]
 
 NEXT:
 - User: refresh the app and confirm subscription status loads (opaque-token fix). Then log in as alice@example.com + bob@example.com to confirm seeded data + premium link (auto-provisioning by email).
 - Test real premium checkout flow end-to-end (Go Premium -> Stripe -> webhook sets isPremium).
-- Consider backgrounding route computation (computeRoute) on mutations to unblock write latency; and/or scaling recommendations (DeepSeek) further.
+- Verify background route computation produces a polyline after editing a trip (jnllnjk has none).
