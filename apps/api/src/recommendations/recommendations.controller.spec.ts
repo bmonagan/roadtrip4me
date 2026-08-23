@@ -3,8 +3,17 @@ import { describe, expect, it, vi } from 'vitest';
 import { RecommendationsController } from './recommendations.controller';
 import { RecommendationsService } from './recommendations.service';
 
-function makeController() {
-  const prisma = { user: { update: vi.fn() } };
+function makeController(overrides: Record<string, unknown> = {}) {
+  const prisma = {
+    user: { update: vi.fn() },
+    recommendationRequest: {
+      findUnique: vi.fn(),
+      create: vi.fn(),
+      delete: vi.fn(),
+      update: vi.fn(),
+    },
+    ...overrides,
+  };
   const controller = new RecommendationsController(
     prisma as never,
     {} as RecommendationsService
@@ -64,3 +73,71 @@ describe('RecommendationsController.consumeDailyBudget', () => {
     ).rejects.toThrow(ForbiddenException);
   });
 });
+
+describe('RecommendationsController.request (stale jobs)', () => {
+  function tripOwnedMock() {
+    return { findFirst: vi.fn().mockResolvedValue({ id: 't1' }) };
+  }
+
+  it('returns the existing job id while a fresh job is processing', async () => {
+    const prisma = {
+      user: { update: vi.fn() },
+      trip: tripOwnedMock(),
+      recommendationRequest: {
+        findUnique: vi.fn().mockResolvedValue({
+          id: 'r1',
+          status: 'processing',
+          updatedAt: new Date(),
+        }),
+      },
+    };
+    const { controller } = makeController(prisma);
+    const result = await controller.request(
+      makeUser() as never,
+      'u1',
+      't1',
+      {} as never
+    );
+    expect(result).toEqual({ requestId: 'r1', status: 'processing' });
+  });
+
+  it('restarts an orphaned processing job older than the stale threshold', async () => {
+    const prisma = {
+      user: { update: vi.fn() },
+      trip: tripOwnedMock(),
+      recommendationRequest: {
+        findUnique: vi.fn().mockResolvedValue({
+          id: 'r_stale',
+          status: 'processing',
+          updatedAt: new Date(Date.now() - 11 * 60 * 1000),
+        }),
+        delete: vi.fn().mockResolvedValue({}),
+        create: vi.fn().mockResolvedValue({ id: 'r_new' }),
+        update: vi.fn().mockResolvedValue({}),
+      },
+    };
+    const { controller } = makeController(prisma);
+    await controller.request(makeUser() as never, 'u1', 't1', {} as never);
+    expect(prisma.recommendationRequest.delete).toHaveBeenCalledWith({
+      where: { id: 'r_stale' },
+    });
+    expect(prisma.recommendationRequest.create).toHaveBeenCalled();
+  });
+
+  it('reports a stale processing job as failed from the status endpoint', async () => {
+    const prisma = {
+      trip: tripOwnedMock(),
+      recommendationRequest: {
+        findUnique: vi.fn().mockResolvedValue({
+          id: 'r_stale',
+          status: 'processing',
+          updatedAt: new Date(Date.now() - 11 * 60 * 1000),
+        }),
+      },
+    };
+    const { controller } = makeController(prisma);
+    const result = await controller.status('u1', 't1');
+    expect(result.status).toBe('failed');
+  });
+});
+

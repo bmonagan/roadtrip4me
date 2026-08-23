@@ -17,6 +17,11 @@ type RecommendationStatus =
 // paid). The counter resets automatically when the local day rolls over.
 const DAILY_RECOMMENDATION_LIMIT = 10;
 
+// A processing/pending request older than this is assumed orphaned (the
+// in-process job died on a restart). It's treated as retryable so the trip
+// isn't blocked forever.
+const STALE_JOB_MS = 10 * 60 * 1000;
+
 @Throttle({ default: { limit: 10, ttl: 60_000 } })
 @Controller('trips')
 export class RecommendationsController {
@@ -42,10 +47,15 @@ export class RecommendationsController {
     });
 
     if (existing) {
-      if (existing.status === 'processing' || existing.status === 'pending') {
+      const isInFlight =
+        existing.status === 'processing' || existing.status === 'pending';
+      const isStale =
+        isInFlight &&
+        Date.now() - existing.updatedAt.getTime() > STALE_JOB_MS;
+      if (isInFlight && !isStale) {
         return { requestId: existing.id, status: existing.status };
       }
-      // completed or failed — allow refresh
+      // completed, failed, or stale — allow refresh
       await this.prisma.recommendationRequest.delete({ where: { id: existing.id } });
     }
 
@@ -130,6 +140,10 @@ export class RecommendationsController {
       const result: { status: 'failed'; message?: string } = { status: 'failed' };
       if (req.error) result.message = req.error;
       return result;
+    }
+    // pending/processing: report stale jobs as failed so the client can retry.
+    if (Date.now() - req.updatedAt.getTime() > STALE_JOB_MS) {
+      return { status: 'failed', message: 'Recommendation job timed out. Try again.' };
     }
     return { status: 'processing' };
   }

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import type { Trip } from '@roadtrip4me/types';
 import { api, type RecommendedStop } from '../lib/api';
@@ -14,13 +14,14 @@ export default function Recommendations({ trip }: { trip: Trip }) {
   const [recs, setRecs] = useState<RecommendedStop[] | null>(null);
   const [phase, setPhase] = useState<'idle' | 'processing' | 'failed'>('idle');
   const [added, setAdded] = useState<Set<string>>(new Set());
-  const pollingRef = useRef<boolean>(false);
 
-  // Poll the job until it completes or fails.
+  // Poll the job while phase === 'processing'. Driven by state (not a ref) so
+  // starting a run re-triggers this effect and the poll actually begins.
   useEffect(() => {
-    if (!pollingRef.current) return;
+    if (phase !== 'processing') return;
     let cancelled = false;
     let attempts = 0;
+    let timer: ReturnType<typeof setTimeout> | undefined;
 
     const poll = async () => {
       try {
@@ -29,26 +30,22 @@ export default function Recommendations({ trip }: { trip: Trip }) {
         if (res.status === 'completed') {
           setRecs(res.data);
           setPhase('idle');
-          pollingRef.current = false;
           toast({ message: `${res.data.length} recommendations ready!`, type: 'success' });
           return;
         }
         if (res.status === 'failed') {
-          pollingRef.current = false;
           setPhase('failed');
           toast({ message: res.message ?? 'Recommendations failed', type: 'error' });
           return;
         }
         if (attempts++ < MAX_POLL_ATTEMPTS) {
-          setTimeout(poll, POLL_INTERVAL_MS);
+          timer = setTimeout(poll, POLL_INTERVAL_MS);
         } else {
-          pollingRef.current = false;
           setPhase('idle');
           toast({ message: 'Recommendations timed out', type: 'warning' });
         }
       } catch (e) {
         if (!cancelled) {
-          pollingRef.current = false;
           setPhase('failed');
           toast({ message: (e as Error).message, type: 'error' });
         }
@@ -58,12 +55,11 @@ export default function Recommendations({ trip }: { trip: Trip }) {
     poll();
     return () => {
       cancelled = true;
-      pollingRef.current = false;
+      if (timer) clearTimeout(timer);
     };
-  }, [trip.id, toast]);
+  }, [phase, trip.id, toast]);
 
   const cancel = () => {
-    pollingRef.current = false;
     setPhase('idle');
   };
 
@@ -72,7 +68,6 @@ export default function Recommendations({ trip }: { trip: Trip }) {
       setRecs(null);
       setAdded(new Set());
       setPhase('processing');
-      pollingRef.current = true;
       return api.trips.recommendations.enqueue(trip.id, {
         vibes: trip.vibes,
         maxDetourMinutes: 30,
@@ -84,7 +79,6 @@ export default function Recommendations({ trip }: { trip: Trip }) {
     },
     onError: (e) => {
       setPhase('idle');
-      pollingRef.current = false;
       toast({ message: (e as Error).message, type: 'error' });
     },
   });

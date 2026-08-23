@@ -117,27 +117,59 @@ export class BillingController {
       }
       case 'customer.subscription.updated': {
         const subscription = event.data.object as Stripe.Subscription;
-        if (subscription.status === 'active' || subscription.status === 'trialing') {
-          await this.prisma.user.update({
-            where: { stripeCustomerId: subscription.customer as string },
-            data: { isPremium: true },
-          });
+        // Downgrade on any non-paying state so users don't keep premium while
+        // Stripe is retrying a failed payment.
+        const premium =
+          subscription.status === 'active' || subscription.status === 'trialing';
+        await this.setPremiumForCustomer(
+          subscription.customer as string,
+          premium
+        );
+        break;
+      }
+      case 'invoice.payment_failed': {
+        const invoice = event.data.object as Stripe.Invoice;
+        const customer = invoice.customer as string | undefined;
+        if (customer) {
+          await this.setPremiumForCustomer(customer, false);
         }
         break;
       }
       case 'customer.subscription.deleted': {
         const subscription = event.data.object as Stripe.Subscription;
         if (subscription.status === 'canceled') {
-          await this.prisma.user.update({
-            where: { stripeCustomerId: subscription.customer as string },
-            data: { isPremium: false },
-          });
+          await this.setPremiumForCustomer(
+            subscription.customer as string,
+            false
+          );
         }
         break;
       }
     }
 
     return { received: true };
+  }
+
+  // Update premium by stripeCustomerId, tolerating a missing user row (e.g. a
+  // missed checkout.session.completed) instead of throwing so Stripe doesn't
+  // retry the webhook forever.
+  private async setPremiumForCustomer(
+    customerId: string,
+    isPremium: boolean
+  ): Promise<void> {
+    try {
+      await this.prisma.user.update({
+        where: { stripeCustomerId: customerId },
+        data: { isPremium },
+      });
+    } catch (error) {
+      const code = (error as { code?: string }).code;
+      if (code === 'P2025') {
+        // No user with this customer id — nothing to downgrade. Acknowledge.
+        return;
+      }
+      throw error;
+    }
   }
 
   private client(secretKey: string): Stripe {

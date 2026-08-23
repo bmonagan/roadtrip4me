@@ -10,7 +10,7 @@ import type {
   TripSummary,
   User,
 } from '@roadtrip4me/types';
-import { authStore } from '../auth/authStore';
+import { authConfig, authStore } from '../auth/authStore';
 
 // TEMPORARY dev fallback: when no Auth0 token is present (local dev with auth
 // disabled on the API), requests are made as a seeded dev user. The active dev
@@ -47,6 +47,9 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   });
 
   if (!res.ok) {
+    if (res.status === 401) {
+      handleUnauthorized();
+    }
     const body = (await res.json().catch(() => null)) as {
       message?: string | string[];
     } | null;
@@ -58,6 +61,22 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
   if (res.status === 204) return undefined as T;
   return (await res.json()) as T;
+}
+
+// When an authenticated request comes back 401 the Auth0 token has expired
+// (opaque tokens are valid 24h) or been invalidated. Clear the session and
+// route the user to the login page. Dev mode (no token) keeps the fallback
+// header and should not trigger redirects — a 401 there means an unknown
+// dev user, surfaced as a normal error instead.
+let redirecting = false;
+function handleUnauthorized(): void {
+  const hadToken = authStore.getToken();
+  authStore.setToken(null);
+  authStore.setDevUserId(null);
+  if (hadToken && authConfig.configured && !redirecting) {
+    redirecting = true;
+    window.location.assign(`/login?expired=1`);
+  }
 }
 
 function toQueryString(params?: object): string {

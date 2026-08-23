@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 
 // Known seeded identities (see apps/api/prisma/seed.ts). Shown only in dev
@@ -22,6 +22,7 @@ const DEV_USERS = [
 export default function LoginPage() {
   const { authMode, devUserId, switchUser, login } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [customId, setCustomId] = useState('');
   const [error, setError] = useState<string | null>(null);
 
@@ -30,6 +31,9 @@ export default function LoginPage() {
     return (
       <div className="page">
         <h1>Log in</h1>
+        {searchParams.get('expired') && (
+          <p className="muted">Your session has expired. Please log in again.</p>
+        )}
         <p className="muted">Sign in with your account to continue.</p>
         <button type="button" className="btn primary" onClick={login}>
           Continue to login
