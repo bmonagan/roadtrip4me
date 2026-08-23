@@ -1,3 +1,5 @@
+todo:
+Email from logging in with google account says autho0 rather than the roadtrip4me
 DONE:
 - Icon on top left of main page is broken. [FIXED - public/ not copied in web Dockerfile]
 - Internal server error when trying to add new trips. [FIXED - stale DB migrations regenerated]
@@ -10,6 +12,7 @@ DONE:
 - Stripe secrets + billing. [DONE - valid live key; STRIPE_PRICE_ID=price_1U4SW5H4CqZkjwkbD8Uh5maq ($54/yr); STRIPE_WEBHOOK_SECRET set; webhook endpoint we_1U4bIUH4CqZkjwkb5EkRWPbO repointed to https://api.roadtrip4me.com/api/v1/billing/webhook. Fixed production bug: webhook used sync constructEvent() which fails on Bun (SubtleCryptoProvider) - now constructEventAsync. Verified: valid signed payload -> 201 {"received":true}.]
 - Fix "Unable to load subscription status" / all requests 401. [DONE - Auth0 issues OPAQUE access tokens when no audience is requested (not JWTs), so jose.jwtVerify() threw "Invalid Compact JWS" on every request. AuthService now detects token format: JWTs verified via tenant JWKS; opaque tokens validated against /userinfo and profile (sub/email/name/picture) feeds the same resolveAccount path. Deployed 30e6f7d. User can refresh (existing opaque token still valid).]
 - Login page improvements. [DONE - header Log in links to /login; login() sends prompt=login so Auth0 always shows its form (no silent auto-login via remembered session). Deployed 280ad3b.]
+- Account page. [DONE - header top-right shows an Account link (avatar/initial) instead of login/logout buttons. New /account page: profile, premium status, subscription management (Go Premium / Cancel), log out; dev mode shows identity picker; signed-out users get login/signup links. Deployed 41591be.]
 
 NEXT:
 - User: refresh the app and confirm subscription status loads (opaque-token fix). Then log in as alice@example.com + bob@example.com to confirm seeded data + premium link (auto-provisioning by email).
