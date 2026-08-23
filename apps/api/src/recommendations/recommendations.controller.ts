@@ -1,7 +1,8 @@
-import { Body, Controller, Get, NotFoundException, Param, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, ForbiddenException, Get, NotFoundException, Param, Post, UseGuards } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
-import { CurrentUserId } from '../auth/current-user.decorator';
+import { CurrentUser, CurrentUserId } from '../auth/current-user.decorator';
 import { PremiumGuard } from '../auth/premium.guard';
+import type { User as UserModel } from '../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { RecommendationRequestDto } from './dto/recommendation-request.dto';
 import { RecommendationsService } from './recommendations.service';
@@ -11,6 +12,10 @@ type RecommendationStatus =
   | { status: 'processing' }
   | { status: 'failed'; message?: string }
   | { status: 'completed'; data: unknown };
+
+// Per-user daily budget on AI recommendation runs (DeepSeek + Places calls are
+// paid). The counter resets automatically when the local day rolls over.
+const DAILY_RECOMMENDATION_LIMIT = 10;
 
 @Throttle({ default: { limit: 10, ttl: 60_000 } })
 @Controller('trips')
@@ -23,11 +28,13 @@ export class RecommendationsController {
   @UseGuards(PremiumGuard)
   @Post(':tripId/recommendations')
   async request(
+    @CurrentUser() user: UserModel,
     @CurrentUserId() userId: string,
     @Param('tripId') tripId: string,
     @Body() dto: RecommendationRequestDto
   ): Promise<{ requestId: string; status: string }> {
     await this.ensureTripOwned(userId, tripId);
+    await this.consumeDailyBudget(user);
 
     // Check for existing request
     const existing = await this.prisma.recommendationRequest.findUnique({
@@ -69,6 +76,36 @@ export class RecommendationsController {
     });
 
     return { requestId: req.id, status: 'processing' };
+  }
+
+  // Enforces the per-user daily budget, atomically resetting the counter when
+  // the day changes. Throws when the user is out of budget.
+  private async consumeDailyBudget(user: UserModel): Promise<void> {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const dayOfCount =
+      user.recommendationCountDay instanceof Date
+        ? new Date(user.recommendationCountDay)
+        : null;
+    const sameDay =
+      dayOfCount !== null &&
+      dayOfCount.getTime() === today.getTime();
+
+    const nextCount = sameDay ? user.recommendationCount + 1 : 1;
+    if (nextCount > DAILY_RECOMMENDATION_LIMIT) {
+      throw new ForbiddenException(
+        `You've reached your daily limit of ${DAILY_RECOMMENDATION_LIMIT} AI recommendation runs. Try again tomorrow.`
+      );
+    }
+
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: {
+        recommendationCount: nextCount,
+        recommendationCountDay: sameDay ? user.recommendationCountDay : today,
+      },
+    });
   }
 
   @Get(':tripId/recommendations')

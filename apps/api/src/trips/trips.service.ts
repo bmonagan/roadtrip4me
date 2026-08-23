@@ -1,4 +1,10 @@
-import { ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  ForbiddenException,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 import type {
   PaginatedResponse,
   Trip,
@@ -38,6 +44,8 @@ const FREE_STOP_LIMIT = 5;
 
 @Injectable()
 export class TripsService {
+  private readonly logger = new Logger(TripsService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly maps: GoogleMapsService,
@@ -69,7 +77,7 @@ export class TripsService {
     });
 
     await this.setGeographyPoints(trip.id, dto.origin, dto.destination);
-    await this.computeRoute(trip.id);
+    this.queueRouteComputation(trip.id);
 
     return this.findOne(userId, trip.id);
   }
@@ -138,7 +146,7 @@ export class TripsService {
         dto.destination ??
         ({ label: updated.destLabel, lat: updated.destLat, lng: updated.destLng } as PlaceDto);
       await this.setGeographyPoints(updated.id, origin, destination);
-      await this.computeRoute(id);
+      this.queueRouteComputation(id);
     }
 
     return this.findOne(userId, id);
@@ -183,7 +191,7 @@ export class TripsService {
       await tx.tripStop.create({ data: { tripId, stopId, order: (last?.order ?? 0) + 1 } });
     });
 
-    await this.computeRoute(tripId);
+    this.queueRouteComputation(tripId);
     return this.findOne(userId, tripId);
   }
 
@@ -210,7 +218,7 @@ export class TripsService {
       throw new NotFoundException('Stop not on this trip');
     }
 
-    await this.computeRoute(tripId);
+    this.queueRouteComputation(tripId);
     return this.findOne(userId, tripId);
   }
 
@@ -234,7 +242,7 @@ export class TripsService {
       });
     });
 
-    await this.computeRoute(tripId);
+    this.queueRouteComputation(tripId);
     return this.findOne(userId, tripId);
   }
 
@@ -260,7 +268,7 @@ export class TripsService {
       throw new NotFoundException('Waypoint not found');
     }
 
-    await this.computeRoute(tripId);
+    this.queueRouteComputation(tripId);
     return this.findOne(userId, tripId);
   }
 
@@ -297,7 +305,22 @@ export class TripsService {
     return this.findOne(userId, tripId);
   }
 
-  // Computes the route synchronously and persists distance, duration, and polyline.
+  // Queues route computation off the request path. Write mutations return
+  // immediately; the driving route (a paid Google Routes call) is computed in
+  // the background and the web polls until the polyline appears.
+  private queueRouteComputation(tripId: string): void {
+    setImmediate(async () => {
+      try {
+        await this.computeRoute(tripId);
+      } catch (error) {
+        this.logger.error(
+          `Route computation failed for trip ${tripId}: ${(error as Error).message}`
+        );
+      }
+    });
+  }
+
+  // Computes the route and persists distance, duration, and polyline.
   private async computeRoute(tripId: string): Promise<void> {
     const trip = await this.prisma.trip.findUnique({
       where: { id: tripId },
