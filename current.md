@@ -1,4 +1,5 @@
 todo:
+Admin page to be able to edit accounts or give people premium for testing.
 Email from logging in with google account says autho0 rather than the roadtrip4me
 DONE:
 - Icon on top left of main page is broken. [FIXED - public/ not copied in web Dockerfile]
@@ -26,6 +27,7 @@ DONE:
 - Async job hardening. [DONE - route computation retries transient failures (3 attempts, backoff) with a single-process in-flight guard so bursty mutations don't trigger duplicate paid Routes calls; reading an unrouted trip re-enqueues route computation (throttled to 1/min/trip) so a mid-job restart no longer leaves a trip polyline-less forever; recommendation background jobs retry 3x with backoff so a flaky DeepSeek/Places call doesn't burn the user's daily budget. New trips.service.spec. Deployed 1556e57. 53 API tests.]
 - Orphan-stop rollback. [DONE - adding a recommended stop could leave an unattached stop behind if the add-to-trip call failed. Added owner-only DELETE /stops/:id (protects stops others have voted on) + compensating rollback in the recommendation add flow. New stops.service.spec. Deployed 9436b9a. 55 API tests.]
 - Verification. [DONE - bob@example.com row was adopted by a real Auth0 login (authId now auth0|6a8a...) confirming email-linking auto-provisioning works; breeban1@gmail.com is a real Google signup auto-provisioned (google-oauth2|...) confirming signup works; the jnllnjk trip (Jakarta->Cologne) is genuinely unroutable by driving (Google Routes returns empty) so its missing polyline is correct, and Route 66 computes fine (3.27M m, 10681 coords).]
+- Scale-to-zero for API + web. [DONE - min_machines_running=0 so the API and web machines stop when idle and wake on traffic; compute is only billed while in use. DB stays always-on. Manual stop-all: `fly apps suspend roadtrip4me-api/web` + `fly apps resume` to bring back; DB can also be suspended but then the site is fully offline until resumed. Deployed 2b828e8.]
 
 NEXT:
 - Auth0 branding (dashboard): Branding -> General set "Roadtrip4me" name/logo; Emails -> Templates sender name; optional custom login domain so emails don't show 'auth0'.
