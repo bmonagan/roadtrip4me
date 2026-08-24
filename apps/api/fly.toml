@@ -12,7 +12,10 @@ primary_region = "ord"
   force_https = true
   auto_stop_machines = "stop"
   auto_start_machines = true
-  min_machines_running = 1
+  # 0 lets the machine stop when idle and wake on traffic — the app only costs
+  # compute while someone is actually using it. The DB stays running (always-on
+  # source of truth); use `fly apps suspend` to stop everything manually.
+  min_machines_running = 0
 
 [[vm]]
   size = "shared-cpu-2x"
