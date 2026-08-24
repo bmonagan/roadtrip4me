@@ -92,7 +92,14 @@ export default function Recommendations({ trip }: { trip: Trip }) {
         coordinates: rec.coordinates,
         address: { city: rec.city, state: rec.state },
       });
-      await api.trips.addStop(trip.id, stop.id);
+      try {
+        await api.trips.addStop(trip.id, stop.id);
+      } catch (e) {
+        // Roll back the orphaned stop if attaching to the trip fails, so a
+        // half-added recommendation doesn't linger in the stops list.
+        await api.stops.remove(stop.id).catch(() => undefined);
+        throw e;
+      }
       return rec;
     },
     onSuccess: (rec) => {

@@ -136,4 +136,17 @@ export class StopsService {
       return stop;
     }).then((stop) => mapStop(stop));
   }
+
+  // Owner-only delete used to clean up a stop created by an interrupted flow
+  // (e.g. a recommendation that failed to attach to its trip). Community stops
+  // others have voted on are protected.
+  async remove(userId: string, stopId: string): Promise<{ deleted: true }> {
+    const deleted = await this.prisma.stop.deleteMany({
+      where: { id: stopId, submittedByUserId: userId },
+    });
+    if (deleted.count === 0) {
+      throw new NotFoundException(`Stop ${stopId} not found`);
+    }
+    return { deleted: true };
+  }
 }

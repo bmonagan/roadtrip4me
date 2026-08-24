@@ -210,6 +210,7 @@ export const api = {
     get: (id: string) => request<StopWithUserVote>(`/stops/${id}`),
     create: (input: CreateStopInput) =>
       request<Stop>('/stops', { method: 'POST', body: JSON.stringify(input) }),
+    remove: (id: string) => request<void>(`/stops/${id}`, { method: 'DELETE' }),
   },
   votes: {
     cast: (stopId: string, value: 1 | -1) =>

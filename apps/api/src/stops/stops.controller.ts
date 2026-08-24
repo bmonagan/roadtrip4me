@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Query } from '@nestjs/common';
 import { CurrentUserId, OptionalUserId } from '../auth/current-user.decorator';
 import { Public } from '../auth/public.decorator';
 import { StopsService } from './stops.service';
@@ -32,5 +32,10 @@ export class StopsController {
   @Post()
   create(@CurrentUserId() userId: string, @Body() dto: CreateStopDto) {
     return this.stopsService.create(userId, dto);
+  }
+
+  @Delete(':id')
+  remove(@CurrentUserId() userId: string, @Param('id') id: string) {
+    return this.stopsService.remove(userId, id);
   }
 }
