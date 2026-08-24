@@ -66,23 +66,36 @@ export class RecommendationsController {
       },
     });
 
-    // Fire-and-forget background processing
+    // Fire-and-forget background processing with a few retries on transient
+    // failures (DeepSeek/Places are paid, so a flaky call shouldn't burn the
+    // user's daily budget for nothing).
     setImmediate(async () => {
-      try {
-        const stops = await this.recommendationsService.recommend(userId, tripId, dto);
-        await this.prisma.recommendationRequest.update({
-          where: { id: req.id },
-          data: { status: 'completed', stops: JSON.parse(JSON.stringify(stops)) },
-        });
-      } catch (err) {
-        await this.prisma.recommendationRequest.update({
-          where: { id: req.id },
-          data: {
-            status: 'failed',
-            error: err instanceof Error ? err.message : String(err),
-          },
-        });
+      const MAX_ATTEMPTS = 3;
+      let lastError: unknown;
+      for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt += 1) {
+        try {
+          const stops = await this.recommendationsService.recommend(userId, tripId, dto);
+          await this.prisma.recommendationRequest.update({
+            where: { id: req.id },
+            data: { status: 'completed', stops: JSON.parse(JSON.stringify(stops)) },
+          });
+          return;
+        } catch (err) {
+          lastError = err;
+          if (attempt < MAX_ATTEMPTS - 1) {
+            await new Promise((resolve) =>
+              setTimeout(resolve, 1_000 * 2 ** attempt)
+            );
+          }
+        }
       }
+      await this.prisma.recommendationRequest.update({
+        where: { id: req.id },
+        data: {
+          status: 'failed',
+          error: lastError instanceof Error ? lastError.message : String(lastError),
+        },
+      });
     });
 
     return { requestId: req.id, status: 'processing' };

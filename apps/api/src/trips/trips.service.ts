@@ -42,10 +42,18 @@ type TripWithRelations = TripModel & {
 
 const FREE_TRIP_LIMIT = 3;
 const FREE_STOP_LIMIT = 5;
+// Minimum interval between re-enqueuing route computation for an unrouted trip
+// when it's read (polling clients otherwise trigger constant paid calls).
+const ROUTE_REQUEUE_MIN_MS = 60_000;
 
 @Injectable()
 export class TripsService {
   private readonly logger = new Logger(TripsService.name);
+  // Trip ids with a route computation currently queued/running, to dedupe
+  // concurrent background jobs (single-process in-flight guard).
+  private readonly routeInFlight = new Set<string>();
+  // Last time a route recompute was re-enqueued for an unrouted trip on read.
+  private readonly routeRequeuedAt = new Map<string, number>();
 
   constructor(
     private readonly prisma: PrismaService,
@@ -113,7 +121,27 @@ export class TripsService {
   }
 
   async findOne(userId: string, id: string): Promise<Trip> {
-    return toTrip(await this.findAccessibleTrip(userId, id));
+    const trip = await this.findAccessibleTrip(userId, id);
+
+    // Recover trips that lost their background route computation (e.g. the
+    // process restarted mid-job): queue a fresh computation without blocking
+    // the read. The in-flight guard prevents duplicate paid Google calls, and
+    // the last-attempt stamp avoids hammering Google on every poll.
+    if (!trip.encodedPolyline) {
+      this.maybeRequeueRoute(trip.id);
+    }
+
+    return toTrip(trip);
+  }
+
+  // Re-queues route computation for an unrouted trip, throttled to once per
+  // trip per interval so polling clients don't trigger constant paid calls.
+  private maybeRequeueRoute(tripId: string): void {
+    const now = Date.now();
+    const last = this.routeRequeuedAt.get(tripId) ?? 0;
+    if (now - last < ROUTE_REQUEUE_MIN_MS) return;
+    this.routeRequeuedAt.set(tripId, now);
+    this.queueRouteComputation(tripId);
   }
 
   async update(userId: string, id: string, dto: UpdateTripDto, _isPremium: boolean): Promise<Trip> {
@@ -338,17 +366,50 @@ export class TripsService {
 
   // Queues route computation off the request path. Write mutations return
   // immediately; the driving route (a paid Google Routes call) is computed in
-  // the background and the web polls until the polyline appears.
+  // the background and the web polls until the polyline appears. Transient
+  // Google/network failures are retried with backoff.
   private queueRouteComputation(tripId: string): void {
+    // In-flight guard: a concurrent job (e.g. from a re-enqueue on read) is
+    // already computing this trip's route; skip to avoid duplicate paid calls.
+    if (this.routeInFlight.has(tripId)) return;
+    this.routeInFlight.add(tripId);
+
     setImmediate(async () => {
       try {
-        await this.computeRoute(tripId);
+        await this.computeRouteWithRetry(tripId);
       } catch (error) {
         this.logger.error(
           `Route computation failed for trip ${tripId}: ${(error as Error).message}`
         );
+      } finally {
+        this.routeInFlight.delete(tripId);
       }
     });
+  }
+
+  // Runs computeRoute with a few retries and exponential backoff so transient
+  // failures don't leave a trip permanently without a polyline.
+  private async computeRouteWithRetry(tripId: string): Promise<void> {
+    const MAX_ATTEMPTS = 3;
+    let attempt = 0;
+    // Wait a beat before retrying so a burst of mutations coalesces into one
+    // final computation of the latest state.
+    const BASE_DELAY_MS = 1_000;
+    while (attempt < MAX_ATTEMPTS) {
+      try {
+        await this.computeRoute(tripId);
+        return;
+      } catch (error) {
+        attempt += 1;
+        if (attempt >= MAX_ATTEMPTS) throw error;
+        this.logger.warn(
+          `Route computation attempt ${attempt}/${MAX_ATTEMPTS} failed for trip ${tripId}: ${(error as Error).message}`
+        );
+        await new Promise((resolve) =>
+          setTimeout(resolve, BASE_DELAY_MS * 2 ** (attempt - 1))
+        );
+      }
+    }
   }
 
   // Computes the route and persists distance, duration, and polyline.
