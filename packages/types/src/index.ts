@@ -7,6 +7,7 @@ export interface User {
   avatarUrl: string | null;
   createdAt: string;
   isPremium: boolean;
+  isAdmin: boolean;
 }
 
 // ─── Geography ───────────────────────────────────────────────────────────────

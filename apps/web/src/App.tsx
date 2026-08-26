@@ -20,6 +20,7 @@ const LoginPage = lazy(() => import('./pages/LoginPage'));
 const SignupPage = lazy(() => import('./pages/SignupPage'));
 const LegalPage = lazy(() => import('./pages/LegalPage'));
 const PremiumPage = lazy(() => import('./pages/PremiumPage'));
+const AdminPage = lazy(() => import('./pages/AdminPage'));
 
 export default function App() {
   const queryClient = useQueryClient();
@@ -66,6 +67,7 @@ export default function App() {
           <nav className="site-nav">
             <NavLink to="/trips">Trips</NavLink>
             <NavLink to="/stops">Stops</NavLink>
+            {me?.isAdmin && <NavLink to="/admin">Admin</NavLink>}
           </nav>
           <div className="site-auth">
             {me?.isPremium && <span className="badge premium">⭐ Premium</span>}
@@ -118,6 +120,7 @@ export default function App() {
                     <Route path="/login" element={<LoginPage />} />
                     <Route path="/signup" element={<SignupPage />} />
                     <Route path="/premium" element={<PremiumPage />} />
+                    <Route path="/admin" element={<AdminPage />} />
                   </Routes>
                 </Suspense>
               </main>

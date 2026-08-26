@@ -63,6 +63,8 @@ model User {
   displayName String
   avatarUrl   String?
   isPremium        Boolean  @default(false)
+  // Admin flag — grants access to the /admin user-management endpoints.
+  isAdmin          Boolean  @default(false)
   stripeCustomerId String?  @unique
   // Daily AI recommendation budget (counters reset when the date rolls over).
   recommendationCount    Int       @default(0)

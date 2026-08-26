@@ -4,6 +4,7 @@ import { ThrottlerGuard } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import { PremiumGuard } from './premium.guard';
+import { AdminGuard } from './admin.guard';
 
 @Global()
 @Module({
@@ -20,7 +21,8 @@ import { PremiumGuard } from './premium.guard';
       useClass: ThrottlerGuard,
     },
     PremiumGuard,
+    AdminGuard,
   ],
-  exports: [AuthService, PremiumGuard],
+  exports: [AuthService, PremiumGuard, AdminGuard],
 })
 export class AuthModule {}

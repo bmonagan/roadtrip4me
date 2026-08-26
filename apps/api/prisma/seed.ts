@@ -33,6 +33,7 @@ async function main() {
       email: 'alice@example.com',
       displayName: 'Alice Wanderer',
       isPremium: true,
+      isAdmin: true,
     },
   });
 

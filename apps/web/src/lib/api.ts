@@ -159,9 +159,28 @@ export interface RecommendationInput {
   };
 }
 
+export interface AdminUserView {
+  id: string;
+  email: string;
+  displayName: string;
+  avatarUrl: string | null;
+  isPremium: boolean;
+  isAdmin: boolean;
+  createdAt: string;
+}
+
 export const api = {
   users: {
     me: () => request<User>(`/users/me`),
+    admin: {
+      list: () => request<AdminUserView[]>(`/users/admin`),
+      update: (id: string, body: { isPremium?: boolean; isAdmin?: boolean }) =>
+        request<AdminUserView>(`/users/admin/${id}`, {
+          method: 'PATCH',
+          body: JSON.stringify(body),
+        }),
+      remove: (id: string) => request<void>(`/users/admin/${id}`, { method: 'DELETE' }),
+    },
   },
   billing: {
     checkout: () => request<{ url: string }>(`/billing/checkout`, { method: 'POST' }),
