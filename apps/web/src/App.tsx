@@ -7,6 +7,7 @@ import { ToastProvider } from './lib/useToast';
 import HomePage from './pages/HomePage';
 import CookieConsent from './components/CookieConsent';
 import ToastContainer from './components/ToastContainer';
+import RequireAuth from './components/RequireAuth';
 
 // Route-level code splitting: each page (and its heavy deps like mapbox-gl)
 // loads only when navigated to, keeping the initial bundle small.
@@ -108,19 +109,66 @@ export default function App() {
                   }
                 >
                   <Routes>
-                    <Route path="/trips" element={<TripsPage />} />
-                    <Route path="/trips/new" element={<TripFormPage />} />
-                    <Route path="/trips/:id" element={<TripDetailPage />} />
-                    <Route path="/trips/:id/edit" element={<TripFormPage />} />
-                    <Route path="/stops" element={<StopsPage />} />
+                    <Route
+                      path="/trips"
+                      element={
+                        <RequireAuth>
+                          <TripsPage />
+                        </RequireAuth>
+                      }
+                    />
+                    <Route
+                      path="/trips/new"
+                      element={
+                        <RequireAuth>
+                          <TripFormPage />
+                        </RequireAuth>
+                      }
+                    />
+                    <Route
+                      path="/trips/:id"
+                      element={
+                        <RequireAuth>
+                          <TripDetailPage />
+                        </RequireAuth>
+                      }
+                    />
+                    <Route
+                      path="/trips/:id/edit"
+                      element={
+                        <RequireAuth>
+                          <TripFormPage />
+                        </RequireAuth>
+                      }
+                    />
+                    <Route
+                      path="/stops"
+                      element={
+                        <StopsPage />
+                      }
+                    />
                     <Route path="/terms" element={<LegalPage kind="terms" />} />
                     <Route path="/privacy" element={<LegalPage kind="privacy" />} />
                     <Route path="/auth/callback" element={<CallbackPage />} />
-                    <Route path="/account" element={<AccountPage />} />
+                    <Route
+                      path="/account"
+                      element={
+                        <RequireAuth>
+                          <AccountPage />
+                        </RequireAuth>
+                      }
+                    />
                     <Route path="/login" element={<LoginPage />} />
                     <Route path="/signup" element={<SignupPage />} />
                     <Route path="/premium" element={<PremiumPage />} />
-                    <Route path="/admin" element={<AdminPage />} />
+                    <Route
+                      path="/admin"
+                      element={
+                        <RequireAuth>
+                          <AdminPage />
+                        </RequireAuth>
+                      }
+                    />
                   </Routes>
                 </Suspense>
               </main>

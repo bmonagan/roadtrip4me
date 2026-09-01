@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import type { Stop } from '@roadtrip4me/types';
 import { api } from '../lib/api';
 import { formatDistance, titleCase } from '../lib/format';
+import { useAuth } from '../auth/AuthContext';
 import VoteButtons from '../components/VoteButtons';
 import AddToTrip from '../components/AddToTrip';
 import AddStopForm from '../components/AddStopForm';
@@ -24,6 +26,8 @@ const CATEGORIES = [
 type NearbyStop = Stop & { distanceMeters: number };
 
 export default function StopsPage() {
+  const { isAuthenticated } = useAuth();
+  const navigate = useNavigate();
   const [category, setCategory] = useState<string>('');
   const [query, setQuery] = useState<string>('');
   // Debounced copy of `query` — the API request fires only after typing pauses,
@@ -41,6 +45,14 @@ export default function StopsPage() {
     queryFn: () => api.stops.list({ pageSize: 50, category, q: debouncedQuery }),
   });
 
+  const openAddForm = () => {
+    if (!isAuthenticated) {
+      navigate('/login');
+      return;
+    }
+    setShowAddForm((v) => !v);
+  };
+
   return (
     <div className="page">
       <div className="page-head">
@@ -48,13 +60,13 @@ export default function StopsPage() {
         <button
           type="button"
           className="btn primary"
-          onClick={() => setShowAddForm((v) => !v)}
+          onClick={openAddForm}
         >
           {showAddForm ? 'Cancel' : '+ Add stop'}
         </button>
       </div>
 
-      {showAddForm && <AddStopForm onDone={() => setShowAddForm(false)} />}
+      {showAddForm && isAuthenticated && <AddStopForm onDone={() => setShowAddForm(false)} />}
 
       <div className="toolbar">
         <label className="muted">
@@ -86,7 +98,7 @@ export default function StopsPage() {
       ) : (
         <ul className="card-list">
           {(data?.data ?? []).map((stop) => (
-            <StopCard key={stop.id} stop={stop} />
+            <StopCard key={stop.id} stop={stop} authenticated={isAuthenticated} />
           ))}
         </ul>
       )}
@@ -94,10 +106,16 @@ export default function StopsPage() {
   );
 }
 
-function StopCard({ stop }: { stop: Stop }) {
+function StopCard({ stop, authenticated }: { stop: Stop; authenticated: boolean }) {
   return (
     <li className="card">
-      <VoteButtons stop={stop} />
+      {authenticated ? (
+        <VoteButtons stop={stop} />
+      ) : (
+        <Link to="/login" className="btn small">
+          Log in to vote
+        </Link>
+      )}
       <div className="card-body">
         <h3>{stop.name}</h3>
         <p className="muted">
@@ -105,7 +123,13 @@ function StopCard({ stop }: { stop: Stop }) {
         </p>
         {stop.description && <p className="stop-description">{stop.description}</p>}
       </div>
-      <AddToTrip stopId={stop.id} />
+      {authenticated ? (
+        <AddToTrip stopId={stop.id} />
+      ) : (
+        <Link to="/login" className="btn small">
+          Log in to add
+        </Link>
+      )}
     </li>
   );
 }

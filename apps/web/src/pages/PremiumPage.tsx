@@ -44,9 +44,15 @@ export default function PremiumPage() {
       <h1>Premium</h1>
 
       {!isAuthenticated ? (
-        <p>
-          <Link to="/">Log in</Link> to manage your subscription.
-        </p>
+        <div className="premium-page">
+          <div className="premium-status premium-free">
+            <p>Log in or create an account to go Premium and unlock unlimited trips, stops, AI recommendations, and collaborations.</p>
+          </div>
+          <div className="premium-actions">
+            <Link to="/login" className="btn primary">Log in</Link>
+            <Link to="/signup" className="btn">Create an account</Link>
+          </div>
+        </div>
       ) : isLoading ? (
         <p>Loading...</p>
       ) : isError ? (

@@ -42,7 +42,10 @@ export default function CallbackPage() {
         authStore.setToken(token);
         sessionStorage.removeItem('roadtrip4me.pkce_verifier');
         sessionStorage.removeItem('roadtrip4me.pkce_state');
-        navigate('/', { replace: true });
+        // Return the user to where they were before login (e.g. /trips, /premium).
+        const redirect = sessionStorage.getItem('roadtrip4me.redirect');
+        sessionStorage.removeItem('roadtrip4me.redirect');
+        navigate(redirect && redirect.startsWith('/') ? redirect : '/', { replace: true });
       })
       .catch((e) => setError((e as Error).message));
   }, [code, codeVerifier, error, navigate]);

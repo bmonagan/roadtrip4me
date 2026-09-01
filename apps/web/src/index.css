@@ -1148,3 +1148,41 @@ button.primary:disabled {
   gap: var(--space-sm);
   flex-wrap: wrap;
 }
+
+/* ─── Premium page ─────────────────────────────────────────────────────────── */
+
+.premium-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+  margin-top: var(--space-md);
+}
+.premium-status {
+  padding: var(--space-lg);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-outline-variant);
+}
+.premium-active {
+  background: var(--color-primary-container);
+  color: var(--color-on-primary-container);
+}
+.premium-free {
+  background: var(--color-surface-container-low);
+}
+.premium-limits,
+.premium-benefits {
+  padding-left: 1.25rem;
+  margin: var(--space-sm) 0 0;
+}
+.premium-limits li,
+.premium-benefits li {
+  margin: 0.25rem 0;
+}
+.premium-upgrade h2 {
+  margin-bottom: var(--space-sm);
+}
+.premium-actions {
+  display: flex;
+  gap: var(--space-sm);
+  flex-wrap: wrap;
+}
