@@ -1,6 +1,8 @@
 # Roadtrip4me 🚗
 
-AI-powered road trip planner with community stop recommendations and travel affiliate integration.
+AI-powered road trip planner: plan a route, discover community stops, get AI
+stop recommendations, and find nearby hotels — with optional Premium
+subscriptions.
 
 ## Stack
 
@@ -10,27 +12,42 @@ AI-powered road trip planner with community stop recommendations and travel affi
 | Frontend | React 18 · TypeScript · Vite · Mapbox GL JS · TanStack Query |
 | Backend | NestJS · Fastify · TypeScript |
 | Database | PostgreSQL 16 + PostGIS · Prisma ORM |
-| Cache / Queue | Redis · BullMQ |
-| Auth | Auth0 |
+| Auth | Auth0 (Authorization Code + PKCE) |
+| Payments | Stripe (Premium subscriptions) |
 | Monorepo | Bun workspaces |
+
+> **Note:** Redis/BullMQ are intentionally not used. All state lives in
+> PostgreSQL; background jobs (route computation, AI recommendations) run
+> in-process with `setImmediate`.
 
 ## Project structure
 
 ```
 roadtrip4me/
 ├── apps/
-│   ├── web/          React + Vite frontend
-│   └── api/          NestJS backend
+│   ├── web/            React + Vite SPA (deployed to Fly.io)
+│   │   └── packages/   types/ — shared types copy used by the Docker build
+│   └── api/            NestJS backend (deployed to Fly.io)
+│       ├── prisma/     schema + migrations
+│       ├── src/        API source (auth, trips, stops, votes, billing, …)
+│       └── packages/   types/ — shared types copy used by the Docker build
 ├── packages/
-│   └── types/        Shared TypeScript interfaces (Trip, Stop, Vote, etc.)
-├── docker-compose.yml  Local Postgres + Redis
-└── package.json       Bun workspace root
+│   └── types/          Shared TypeScript interfaces (source of truth)
+├── docs/               Affiliate + operational findings
+├── docker-compose.yml  Local Postgres (PostGIS) for development
+├── .env.prod.example   Reference list of production env vars (Fly.io secrets)
+└── package.json        Bun workspace root
 ```
+
+> The web and api Docker images are built with a self-contained `packages/types`
+> copy (Vite resolves `@roadtrip4me/types` to it at build time). Keep it in sync
+> with `packages/types/src/index.ts` when changing shared types.
 
 ## Prerequisites
 
 - [Bun](https://bun.sh) >= 1.x
-- [Docker](https://docker.com) + Docker Compose
+- [Docker](https://docker.com) + Docker Compose (local Postgres only)
+- External API keys (see [External APIs](#external-apis-required))
 
 ## Getting started
 
@@ -47,19 +64,19 @@ cp apps/api/.env.example apps/api/.env
 cp apps/web/.env.example apps/web/.env
 ```
 
-Fill in the required values in both `.env` files. At minimum you need:
-- `VITE_MAPBOX_TOKEN` — from [mapbox.com](https://mapbox.com)
-- `GOOGLE_MAPS_API_KEY` — from [Google Cloud Console](https://console.cloud.google.com)
+Fill in the required values. At minimum for local development:
+- `VITE_MAPBOX_TOKEN` — [mapbox.com](https://mapbox.com)
+- `GOOGLE_MAPS_API_KEY` — [Google Cloud Console](https://console.cloud.google.com)
+- Leave `AUTH_DISABLED=true` to use the dev fallback (the API trusts an
+  `x-user-id` header for the seeded users instead of Auth0).
 
-### 3. Start local infrastructure
+### 3. Start local infrastructure (Postgres + PostGIS)
 
 ```bash
 docker compose up -d
 ```
 
-This starts:
-- PostgreSQL + PostGIS on port 5432
-- Redis on port 6379
+Runs Postgres on port 5432.
 
 ### 4. Start development servers
 
@@ -72,11 +89,14 @@ bun run dev:web   # http://localhost:5173
 bun run dev:api   # http://localhost:3000
 ```
 
-## API health check
+### 5. Seed the database (optional)
 
 ```bash
-curl http://localhost:3000/api/v1/health
+bunx prisma db seed
 ```
+
+Seeds two dev users (`alice@example.com` premium/admin, `bob@example.com`),
+community stops, votes, and a sample trip.
 
 ## Key commands
 
@@ -90,29 +110,61 @@ bun run start       # Run the built API (apps/api/dist/main.js)
 bun run preview     # Serve the built web on port 5173
 ```
 
-## Production deployment
-
-The stack deploys as three containers behind one origin (nginx serves the SPA
-and reverse-proxies `/api` to the API — no CORS exposure):
+## API health check
 
 ```bash
-cp .env.prod.example .env.prod    # fill in real values
-docker compose -f docker-compose.prod.yml up -d --build
+curl http://localhost:3000/api/v1/health
 ```
 
-The API container applies migrations (`prisma migrate deploy`) on boot, then
-starts the compiled bundle. The web container bakes `VITE_MAPBOX_TOKEN` and the
-Auth0 config into the static build.
+## Authentication modes
 
-**Production checklist:**
+- **Dev (`AUTH_DISABLED=true`)**: the API trusts the `x-user-id` header. The
+  `/login` page lets you pick a seeded identity (Alice/Bob) or a custom id.
+- **Production (`AUTH_DISABLED=false`)**: Auth0 access tokens are required.
+  Opaque tokens are validated against `/userinfo`; JWT access tokens (when a
+  custom API audience is configured) are verified against the tenant JWKS. New
+  users are auto-provisioned by email on first login.
 
-- Set `AUTH_DISABLED=false` and configure `AUTH0_DOMAIN`/`AUTH0_AUDIENCE` (see
-  `SECURITY.md`) — never leave the dev `x-user-id` fallback enabled in prod.
-- Provision a real Postgres (PostGIS) + Redis, or attach volumes for the
-  compose services; take regular backups of `postgres_data`.
-- Point a domain at the web container and terminate TLS (Caddy/Let's Encrypt or
-  a load balancer) in front of it.
-- Keep API keys in a secret manager / `.env.prod`; never commit them.
+## Production deployment (Fly.io)
+
+The app runs on three Fly.io apps in the `ord` (Chicago) region:
+
+| App | What it runs | Machine |
+|---|---|---|
+| `roadtrip4me-web` | Static SPA behind nginx | shared-cpu-1x |
+| `roadtrip4me-api` | NestJS API | shared-cpu-2x |
+| `roadtrip4me-db`  | PostgreSQL + PostGIS (flex) | shared-cpu-1x, 10GB volume |
+
+Deploys are automated by GitHub Actions (`.github/workflows/deploy.yml`):
+push to `main` → CI (typecheck, lint, test, build) → `flyctl deploy` for the
+API and web. The API applies migrations on boot (`prisma migrate deploy`).
+
+**Scale behavior:** the API and web machines scale to zero when idle
+(`min_machines_running = 0`) and wake on traffic. The DB stays always-on.
+
+**To deploy manually:**
+
+```bash
+# API
+cd apps/api && fly deploy --remote-only --app roadtrip4me-api --dockerfile Dockerfile
+
+# Web
+cd apps/web && fly deploy --remote-only --app roadtrip4me-web --dockerfile Dockerfile
+```
+
+**To stop everything (no compute, keeps the DB volume):**
+
+```bash
+fly scale count 0 -a roadtrip4me-api --yes
+fly scale count 0 -a roadtrip4me-web --yes
+fly machine stop <db-machine-id> -a roadtrip4me-db   # find id: fly machines list -a roadtrip4me-db
+```
+
+**Production env vars** are stored as Fly secrets / GitHub Actions secrets
+(`AUTH0_DOMAIN`, `STRIPE_SECRET_KEY`, `STRIPE_PRICE_ID`, `STRIPE_WEBHOOK_SECRET`,
+`GOOGLE_MAPS_API_KEY`, `DEEPSEEK_API_KEY`, `VITE_MAPBOX_TOKEN`,
+`VITE_AUTH0_DOMAIN`, `VITE_AUTH0_CLIENT_ID`, …). See `.env.prod.example` for the
+full reference.
 
 ## External APIs required
 
@@ -121,6 +173,9 @@ Auth0 config into the static build.
 | Google Maps (Routes) | Driving routes + polylines | [console.cloud.google.com](https://console.cloud.google.com) |
 | Google Maps (Places) | Verify AI stop coordinates | [console.cloud.google.com](https://console.cloud.google.com) |
 | Mapbox | Map display + geocoding | [mapbox.com](https://mapbox.com) |
-| DeepSeek | Stop recommendations | [platform.deepseek.com](https://platform.deepseek.com) |
+| DeepSeek | AI stop recommendations | [platform.deepseek.com](https://platform.deepseek.com) |
 | Auth0 | Authentication | [auth0.com](https://auth0.com) |
-| Booking.com | Hotel affiliate | [booking.com/affiliate](https://www.booking.com/affiliate) |
+| Stripe | Premium subscriptions | [dashboard.stripe.com](https://dashboard.stripe.com) |
+| Booking.com | Hotel affiliate deeplinks | [booking.com/affiliate](https://www.booking.com/affiliate) |
+
+See `docs/affiliate-integration.md` for the affiliate plan.

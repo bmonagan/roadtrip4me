@@ -36,9 +36,9 @@
 
 ## Secrets
 
-- All keys (`GOOGLE_MAPS_API_KEY`, `DEEPSEEK_API_KEY`, database, Redis, Auth0)
-  live in gitignored `.env` files. Provide real values via a secret manager in
-  production; never commit them.
+- All keys (`GOOGLE_MAPS_API_KEY`, `DEEPSEEK_API_KEY`, `STRIPE_SECRET_KEY`,
+  Auth0) live in gitignored `.env` files. Provide real values via a secret
+  manager (or Fly.io secrets in production); never commit them.
 
 ## Dependency audit
 
