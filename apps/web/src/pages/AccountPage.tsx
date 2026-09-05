@@ -61,7 +61,9 @@ export default function AccountPage() {
 
   const selectDevUser = (id: string) => {
     switchUser(id);
-    navigate('/', { replace: true });
+    const redirect = sessionStorage.getItem('roadtrip4me.redirect');
+    sessionStorage.removeItem('roadtrip4me.redirect');
+    navigate(redirect && redirect.startsWith('/') ? redirect : '/', { replace: true });
   };
 
   if (authMode === 'dev') {

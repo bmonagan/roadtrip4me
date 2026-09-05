@@ -39,9 +39,10 @@ export class RecommendationsController {
     @Body() dto: RecommendationRequestDto
   ): Promise<{ requestId: string; status: string }> {
     await this.ensureTripOwned(userId, tripId);
-    await this.consumeDailyBudget(user);
 
-    // Check for existing request
+    // Check for existing request BEFORE consuming budget: a request that is
+    // still running (deduped early return below) shouldn't spend the user's
+    // daily allowance for nothing.
     const existing = await this.prisma.recommendationRequest.findUnique({
       where: { tripId },
     });
@@ -58,6 +59,8 @@ export class RecommendationsController {
       // completed, failed, or stale — allow refresh
       await this.prisma.recommendationRequest.delete({ where: { id: existing.id } });
     }
+
+    await this.consumeDailyBudget(user);
 
     const req = await this.prisma.recommendationRequest.create({
       data: {

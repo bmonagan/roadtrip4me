@@ -45,9 +45,15 @@ export default function LoginPage() {
     );
   }
 
+  const goToRedirect = () => {
+    const redirect = sessionStorage.getItem('roadtrip4me.redirect');
+    sessionStorage.removeItem('roadtrip4me.redirect');
+    navigate(redirect && redirect.startsWith('/') ? redirect : '/', { replace: true });
+  };
+
   const select = (id: string) => {
     switchUser(id);
-    navigate('/', { replace: true });
+    goToRedirect();
   };
 
   const submitCustom = (e: React.FormEvent) => {

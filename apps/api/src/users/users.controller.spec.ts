@@ -46,7 +46,8 @@ describe('UsersController admin endpoints', () => {
     const { controller, prisma } = makeController();
     prisma.user.update.mockResolvedValue(makeUser({ isPremium: true }));
 
-    const result = await controller.adminUpdate('u1', { isPremium: true });
+    const actor = makeUser({ id: 'admin1', isAdmin: true });
+    const result = await controller.adminUpdate(actor, 'u1', { isPremium: true });
     expect(result.isPremium).toBe(true);
     expect(prisma.user.update).toHaveBeenCalledWith({
       where: { id: 'u1' },
@@ -58,16 +59,36 @@ describe('UsersController admin endpoints', () => {
     const { controller, prisma } = makeController();
     prisma.user.update.mockResolvedValue(makeUser({ isAdmin: true }));
 
-    const result = await controller.adminUpdate('u1', { isAdmin: true });
+    const actor = makeUser({ id: 'admin1', isAdmin: true });
+    const result = await controller.adminUpdate(actor, 'u1', { isAdmin: true });
     expect(result.isAdmin).toBe(true);
+  });
+
+  it('blocks an admin from removing their own admin role', async () => {
+    const { controller, prisma } = makeController();
+    const actor = makeUser({ id: 'admin1', isAdmin: true });
+
+    await expect(controller.adminUpdate(actor, 'admin1', { isAdmin: false })).rejects.toThrow(
+      'own admin role'
+    );
+    expect(prisma.user.update).not.toHaveBeenCalled();
   });
 
   it('deletes a user', async () => {
     const { controller, prisma } = makeController();
     prisma.user.delete.mockResolvedValue({});
 
-    const result = await controller.adminDelete('u1');
+    const actor = makeUser({ id: 'admin1', isAdmin: true });
+    const result = await controller.adminDelete(actor, 'u1');
     expect(result).toEqual({ deleted: true });
     expect(prisma.user.delete).toHaveBeenCalledWith({ where: { id: 'u1' } });
+  });
+
+  it('blocks an admin from deleting their own account', async () => {
+    const { controller, prisma } = makeController();
+    const actor = makeUser({ id: 'admin1', isAdmin: true });
+
+    await expect(controller.adminDelete(actor, 'admin1')).rejects.toThrow('own account');
+    expect(prisma.user.delete).not.toHaveBeenCalled();
   });
 });

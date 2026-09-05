@@ -18,7 +18,7 @@ export default function Toast({ toast: t, onDismiss }: { toast: Toast; onDismiss
     <div className={`toast toast-${t.type}`} role="alert">
       <span className="toast-icon">{icons[t.type]}</span>
       <span className="toast-message">{t.message}</span>
-      <button type="button" className="toast-close" onClick={onDismiss}>
+      <button type="button" className="toast-close" onClick={onDismiss} aria-label="Dismiss notification">
         ×
       </button>
     </div>

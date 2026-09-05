@@ -101,6 +101,14 @@ export class BillingController {
       throw new BadGatewayException(`Invalid Stripe webhook signature: ${(error as Error).message}`);
     }
 
+    await this.handleEvent(event);
+    return { received: true };
+  }
+
+  // Applies a verified Stripe event to the database. Extracted from the webhook
+  // handler so the event → user-update mapping is unit-testable without a real
+  // Stripe client.
+  private async handleEvent(event: Stripe.Event): Promise<void> {
     switch (event.type) {
       case 'checkout.session.completed': {
         const session = event.data.object as Stripe.Checkout.Session;
@@ -146,8 +154,6 @@ export class BillingController {
         break;
       }
     }
-
-    return { received: true };
   }
 
   // Update premium by stripeCustomerId, tolerating a missing user row (e.g. a

@@ -75,6 +75,14 @@ function handleUnauthorized(): void {
   authStore.setDevUserId(null);
   if (hadToken && authConfig.configured && !redirecting) {
     redirecting = true;
+    // Preserve where the user was so CallbackPage can return them there after
+    // they log back in.
+    if (!sessionStorage.getItem('roadtrip4me.redirect')) {
+      sessionStorage.setItem(
+        'roadtrip4me.redirect',
+        window.location.pathname + window.location.search
+      );
+    }
     window.location.assign(`/login?expired=1`);
   }
 }

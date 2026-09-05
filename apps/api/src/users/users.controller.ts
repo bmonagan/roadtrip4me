@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Patch, UseGuards } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Delete, Get, Param, Patch, UseGuards } from '@nestjs/common';
 import type { User } from '../types';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { AdminGuard } from '../auth/admin.guard';
@@ -56,9 +56,14 @@ export class UsersController {
   @UseGuards(AdminGuard)
   @Patch('admin/:id')
   async adminUpdate(
+    @CurrentUser() actor: UserModel,
     @Param('id') id: string,
     @Body() body: AdminUpdateUserDto
   ): Promise<AdminUserView> {
+    // Prevent an admin from removing their own admin role.
+    if (actor.id === id && body.isAdmin === false) {
+      throw new BadRequestException('You cannot remove your own admin role');
+    }
     const user = await this.prisma.user.update({
       where: { id },
       data: {
@@ -71,7 +76,14 @@ export class UsersController {
 
   @UseGuards(AdminGuard)
   @Delete('admin/:id')
-  async adminDelete(@Param('id') id: string): Promise<{ deleted: true }> {
+  async adminDelete(
+    @CurrentUser() actor: UserModel,
+    @Param('id') id: string
+  ): Promise<{ deleted: true }> {
+    // Prevent an admin from deleting their own account through this endpoint.
+    if (actor.id === id) {
+      throw new BadRequestException('You cannot delete your own account here');
+    }
     await this.prisma.user.delete({ where: { id } });
     return { deleted: true };
   }

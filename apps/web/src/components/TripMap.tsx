@@ -108,5 +108,7 @@ export default function TripMap({ trip }: { trip: Trip }) {
     return <p className="muted">Add VITE_MAPBOX_TOKEN to apps/web/.env to see the map.</p>;
   }
 
-  return <div ref={containerRef} className="trip-map" aria-label="Trip route map" />;
+  return (
+    <div ref={containerRef} className="trip-map" role="img" aria-label="Trip route map" />
+  );
 }

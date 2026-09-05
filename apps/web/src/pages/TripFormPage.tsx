@@ -31,7 +31,7 @@ export default function TripFormPage() {
   const queryClient = useQueryClient();
   const [searchParams] = useSearchParams();
 
-  const { data: trip, isLoading } = useQuery({
+  const { data: trip, isLoading, isError, error } = useQuery({
     queryKey: ['trip', id],
     queryFn: () => api.trips.get(id!),
     enabled: isEdit,
@@ -128,6 +128,14 @@ export default function TripFormPage() {
   };
 
   if (isEdit && isLoading) return <p className="muted">Loading trip…</p>;
+  if (isEdit && isError) {
+    return (
+      <div className="page">
+        <p className="error">{(error as Error).message}</p>
+        <Link to="/trips" className="btn">← Back to trips</Link>
+      </div>
+    );
+  }
 
   return (
     <div className="page form-page">
@@ -182,6 +190,7 @@ export default function TripFormPage() {
                 key={vibe}
                 type="button"
                 className={`chip${vibes.includes(vibe) ? ' chip-active' : ''}`}
+                aria-pressed={vibes.includes(vibe)}
                 onClick={() => toggleVibe(vibe)}
               >
                 {vibe}

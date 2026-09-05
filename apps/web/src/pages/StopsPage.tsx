@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import type { Stop } from '@roadtrip4me/types';
@@ -80,16 +80,18 @@ export default function StopsPage() {
             ))}
           </select>
         </label>
-        <input
-          type="search"
-          className="stop-search"
-          placeholder="Search stops, city, state…"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-        />
+        <label className="muted" aria-label="Search stops, city, state">
+          <input
+            type="search"
+            className="stop-search"
+            placeholder="Search stops, city, state…"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
+        </label>
       </div>
 
-      <NearbyStops />
+      <NearbyStops authenticated={isAuthenticated} />
 
       {isLoading ? (
         <LoadingBanner message="Loading stops…" />
@@ -134,10 +136,17 @@ function StopCard({ stop, authenticated }: { stop: Stop; authenticated: boolean 
   );
 }
 
-function NearbyStops() {
+function NearbyStops({ authenticated }: { authenticated: boolean }) {
   const [nearby, setNearby] = useState<NearbyStop[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const mounted = useRef(true);
+
+  useEffect(() => {
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
 
   const findNearby = () => {
     setError(null);
@@ -151,18 +160,29 @@ function NearbyStops() {
             lng: longitude,
             radiusMeters: 50_000,
           });
-          setNearby(results);
+          if (mounted.current) setNearby(results);
         } catch (e) {
-          setError((e as Error).message);
+          if (mounted.current) setError((e as Error).message);
         } finally {
-          setLoading(false);
+          if (mounted.current) setLoading(false);
         }
       },
       (err) => {
-        setError(`Location unavailable: ${err.message}`);
-        setLoading(false);
+        if (mounted.current) {
+          setError(`Location unavailable: ${err.message}`);
+          setLoading(false);
+        }
       }
     );
+  };
+
+  const loginTo = () => {
+    if (!sessionStorage.getItem('roadtrip4me.redirect')) {
+      sessionStorage.setItem(
+        'roadtrip4me.redirect',
+        window.location.pathname + window.location.search
+      );
+    }
   };
 
   return (
@@ -176,14 +196,26 @@ function NearbyStops() {
         <ul className="card-list">
           {nearby.map((stop) => (
             <li key={stop.id} className="card">
-              <VoteButtons stop={stop} />
+              {authenticated ? (
+                <VoteButtons stop={stop} />
+              ) : (
+                <Link to="/login" className="btn small" onClick={loginTo}>
+                  Log in to vote
+                </Link>
+              )}
               <div className="card-body">
                 <h3>{stop.name}</h3>
                 <p className="muted">
                   {formatDistance(stop.distanceMeters)} away · {titleCase(stop.category)}
                 </p>
               </div>
-              <AddToTrip stopId={stop.id} />
+              {authenticated ? (
+                <AddToTrip stopId={stop.id} />
+              ) : (
+                <Link to="/login" className="btn small" onClick={loginTo}>
+                  Log in to add
+                </Link>
+              )}
             </li>
           ))}
         </ul>
