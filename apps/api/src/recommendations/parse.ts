@@ -73,6 +73,14 @@ function cleanString(value: unknown): string | null {
 }
 
 function cleanNumber(value: unknown): number | null {
-  const n = typeof value === 'number' ? value : Number(value);
-  return Number.isFinite(n) ? n : null;
+  if (typeof value === 'number') return Number.isFinite(value) ? value : null;
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (trimmed === '') return null;
+    const n = Number(trimmed);
+    return Number.isFinite(n) ? n : null;
+  }
+  // null/undefined/objects must not be coerced (Number(null) === 0 would place
+  // a stop at (0,0)); only real numbers or numeric strings are accepted.
+  return null;
 }

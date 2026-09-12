@@ -46,6 +46,18 @@ describe('parseStops', () => {
     expect(stops[0]!.name).toBe('ok');
   });
 
+  it('drops stops whose coordinates are null or empty strings (not coerced to 0)', () => {
+    const stops = parseStops({
+      stops: [
+        { name: 'null coords', lat: null, lng: null },
+        { name: 'empty coords', lat: '', lng: '' },
+        { name: 'valid', lat: 10, lng: 20 },
+      ],
+    });
+    expect(stops).toHaveLength(1);
+    expect(stops[0]!.name).toBe('valid');
+  });
+
   it('returns empty for non-object input', () => {
     expect(parseStops(null)).toEqual([]);
     expect(parseStops({})).toEqual([]);
