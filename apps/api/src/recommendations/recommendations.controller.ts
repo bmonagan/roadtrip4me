@@ -1,8 +1,8 @@
-import { Body, Controller, ForbiddenException, Get, NotFoundException, Param, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, ForbiddenException, Get, Logger, NotFoundException, Param, Post, UseGuards } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import { CurrentUser, CurrentUserId } from '../auth/current-user.decorator';
 import { PremiumGuard } from '../auth/premium.guard';
-import type { User as UserModel } from '../generated/prisma/client';
+import type { Prisma, User as UserModel } from '../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { RecommendationRequestDto } from './dto/recommendation-request.dto';
 import { RecommendationsService } from './recommendations.service';
@@ -25,6 +25,8 @@ const STALE_JOB_MS = 10 * 60 * 1000;
 @Throttle({ default: { limit: 10, ttl: 60_000 } })
 @Controller('trips')
 export class RecommendationsController {
+  private readonly logger = new Logger(RecommendationsController.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly recommendationsService: RecommendationsService,
@@ -75,30 +77,40 @@ export class RecommendationsController {
     setImmediate(async () => {
       const MAX_ATTEMPTS = 3;
       let lastError: unknown;
-      for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt += 1) {
-        try {
-          const stops = await this.recommendationsService.recommend(userId, tripId, dto);
-          await this.prisma.recommendationRequest.update({
-            where: { id: req.id },
-            data: { status: 'completed', stops: JSON.parse(JSON.stringify(stops)) },
-          });
-          return;
-        } catch (err) {
-          lastError = err;
-          if (attempt < MAX_ATTEMPTS - 1) {
-            await new Promise((resolve) =>
-              setTimeout(resolve, 1_000 * 2 ** attempt)
-            );
+      try {
+        for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt += 1) {
+          try {
+            const stops = await this.recommendationsService.recommend(userId, tripId, dto);
+            await this.updateRequestQuietly(req.id, {
+              status: 'completed',
+              stops: JSON.parse(JSON.stringify(stops)),
+            });
+            return;
+          } catch (err) {
+            lastError = err;
+            // If this job was superseded (a newer request deleted its row),
+            // stop retrying so a dead job doesn't burn more paid calls.
+            const stillExists = await this.prisma.recommendationRequest.findUnique({
+              where: { id: req.id },
+              select: { id: true },
+            });
+            if (!stillExists) return;
+            if (attempt < MAX_ATTEMPTS - 1) {
+              await new Promise((resolve) =>
+                setTimeout(resolve, 1_000 * 2 ** attempt)
+              );
+            }
           }
         }
-      }
-      await this.prisma.recommendationRequest.update({
-        where: { id: req.id },
-        data: {
+        await this.updateRequestQuietly(req.id, {
           status: 'failed',
           error: lastError instanceof Error ? lastError.message : String(lastError),
-        },
-      });
+        });
+      } catch (err) {
+        this.logger.error(
+          `Recommendation job ${req.id} failed: ${(err as Error).message}`
+        );
+      }
     });
 
     return { requestId: req.id, status: 'processing' };
@@ -164,6 +176,19 @@ export class RecommendationsController {
       return { status: 'failed', message: 'Recommendation job timed out. Try again.' };
     }
     return { status: 'processing' };
+  }
+
+  // Update the job row, swallowing P2025 (row already deleted by a newer
+  // request) so a superseded job can't throw an unhandled rejection.
+  private async updateRequestQuietly(
+    id: string,
+    data: Prisma.RecommendationRequestUpdateInput,
+  ): Promise<void> {
+    try {
+      await this.prisma.recommendationRequest.update({ where: { id }, data });
+    } catch (error) {
+      if ((error as { code?: string }).code !== 'P2025') throw error;
+    }
   }
 
   private async ensureTripOwned(userId: string, tripId: string): Promise<void> {
