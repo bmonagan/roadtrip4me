@@ -255,6 +255,10 @@ export class TripsService {
     await this.ensureTripAccess(userId, tripId);
 
     const deleted = await this.prisma.$transaction(async (tx) => {
+      // Serialize stop mutations per trip (mirrors addStop) so concurrent
+      // removes can't race on the order renumbering below and violate the
+      // unique (tripId, order) constraint.
+      await tx.$queryRaw`SELECT id FROM trips WHERE id = ${tripId} FOR UPDATE`;
       const result = await tx.tripStop.deleteMany({ where: { tripId, stopId } });
       if (result.count > 0) {
         // Re-number remaining stops so order stays contiguous (no gaps).
@@ -309,6 +313,9 @@ export class TripsService {
     await this.ensureTripAccess(userId, tripId);
 
     const deleted = await this.prisma.$transaction(async (tx) => {
+      // Serialize waypoint mutations per trip (mirrors addWaypoint) so
+      // concurrent removes can't race on the order renumbering below.
+      await tx.$queryRaw`SELECT id FROM trips WHERE id = ${tripId} FOR UPDATE`;
       const result = await tx.tripWaypoint.deleteMany({ where: { id: waypointId, tripId } });
       if (result.count > 0) {
         const remaining = await tx.tripWaypoint.findMany({
