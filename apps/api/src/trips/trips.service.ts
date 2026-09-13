@@ -45,6 +45,9 @@ const FREE_STOP_LIMIT = 5;
 // Minimum interval between re-enqueuing route computation for an unrouted trip
 // when it's read (polling clients otherwise trigger constant paid calls).
 const ROUTE_REQUEUE_MIN_MS = 60_000;
+// Bound on the requeue-throttle cache so it can't grow without limit in a
+// long-lived process.
+const ROUTE_REQUEUE_CACHE_MAX = 10_000;
 
 @Injectable()
 export class TripsService {
@@ -141,6 +144,11 @@ export class TripsService {
     const last = this.routeRequeuedAt.get(tripId) ?? 0;
     if (now - last < ROUTE_REQUEUE_MIN_MS) return;
     this.routeRequeuedAt.set(tripId, now);
+    // Keep the cache bounded — drop the oldest entry when it grows too big.
+    if (this.routeRequeuedAt.size > ROUTE_REQUEUE_CACHE_MAX) {
+      const oldest = this.routeRequeuedAt.keys().next().value;
+      if (oldest) this.routeRequeuedAt.delete(oldest);
+    }
     this.queueRouteComputation(tripId);
   }
 
