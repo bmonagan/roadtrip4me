@@ -5,6 +5,8 @@ import type { GeoPoint } from '../common/geo';
 const ROUTES_API_URL = 'https://routes.googleapis.com/directions/v2:computeRoutes';
 const PLACES_API_URL = 'https://places.googleapis.com/v1/places:searchText';
 const MAX_INTERMEDIATES = 25;
+const ROUTE_TIMEOUT_MS = 15_000;
+const PLACE_TIMEOUT_MS = 10_000;
 
 export interface RouteResult {
   /** Standard (google) polyline encoding of the route, decodable by @googlemaps/polyline-codec. */
@@ -36,6 +38,8 @@ export class GoogleMapsService {
       throw new Error('GOOGLE_MAPS_API_KEY is not configured');
     }
 
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), ROUTE_TIMEOUT_MS);
     const res = await fetch(ROUTES_API_URL, {
       method: 'POST',
       headers: {
@@ -54,7 +58,8 @@ export class GoogleMapsService {
         travelMode: 'DRIVE',
         polylineEncoding: 'GEO_JSON_LINESTRING',
       }),
-    });
+      signal: controller.signal,
+    }).finally(() => clearTimeout(timeout));
 
     if (!res.ok) {
       throw new Error(`Routes API error ${res.status}: ${(await res.text()).slice(0, 500)}`);
@@ -95,6 +100,8 @@ export class GoogleMapsService {
     if (!apiKey) return null;
 
     try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), PLACE_TIMEOUT_MS);
       const res = await fetch(PLACES_API_URL, {
         method: 'POST',
         headers: {
@@ -103,7 +110,8 @@ export class GoogleMapsService {
           'X-Goog-FieldMask': 'places.location,places.displayName',
         },
         body: JSON.stringify({ textQuery, languageCode: 'en' }),
-      });
+        signal: controller.signal,
+      }).finally(() => clearTimeout(timeout));
       if (!res.ok) return null;
 
       const data = (await res.json()) as {
