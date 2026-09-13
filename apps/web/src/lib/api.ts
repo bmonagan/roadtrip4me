@@ -181,7 +181,10 @@ export const api = {
   users: {
     me: () => request<User>(`/users/me`),
     admin: {
-      list: () => request<AdminUserView[]>(`/users/admin`),
+      list: (params?: { page?: number; pageSize?: number }) =>
+        request<PaginatedResponse<AdminUserView>>(
+          `/users/admin${toQueryString(params)}`
+        ),
       update: (id: string, body: { isPremium?: boolean; isAdmin?: boolean }) =>
         request<AdminUserView>(`/users/admin/${id}`, {
           method: 'PATCH',

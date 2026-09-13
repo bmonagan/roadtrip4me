@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../auth/AuthContext';
 import { api, ApiError, type AdminUserView } from '../lib/api';
@@ -19,9 +20,11 @@ export default function AdminPage() {
     enabled: isAuthenticated,
   });
 
-  const { data: users, isLoading, isError, error } = useQuery({
-    queryKey: ['users/admin'],
-    queryFn: () => api.users.admin.list(),
+  const [page, setPage] = useState(1);
+
+  const { data, isLoading, isError, error } = useQuery({
+    queryKey: ['users/admin', page],
+    queryFn: () => api.users.admin.list({ page, pageSize: 50 }),
     enabled: isAuthenticated && !!me?.isAdmin,
   });
 
@@ -81,7 +84,7 @@ export default function AdminPage() {
           </tr>
         </thead>
         <tbody>
-          {(users ?? []).map((u) => (
+          {(data?.data ?? []).map((u) => (
             <tr key={u.id}>
               <td>{u.displayName}</td>
               <td>{u.email}</td>
@@ -130,6 +133,30 @@ export default function AdminPage() {
           ))}
         </tbody>
       </table>
+
+      {data && (
+        <div className="pagination">
+          <button
+            type="button"
+            className="btn small"
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            disabled={page <= 1}
+          >
+            ← Prev
+          </button>
+          <span className="muted">
+            Page {data.page} of {Math.max(1, Math.ceil(data.total / data.pageSize))}
+          </span>
+          <button
+            type="button"
+            className="btn small"
+            onClick={() => setPage((p) => p + 1)}
+            disabled={!data.hasNextPage}
+          >
+            Next →
+          </button>
+        </div>
+      )}
     </div>
   );
 }

@@ -1,10 +1,11 @@
-import { BadRequestException, Body, Controller, Delete, Get, Param, Patch, UseGuards } from '@nestjs/common';
-import type { User } from '../types';
+import { BadRequestException, Body, Controller, Delete, Get, Param, Patch, Query, UseGuards } from '@nestjs/common';
+import type { PaginatedResponse, User } from '../types';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { AdminGuard } from '../auth/admin.guard';
 import type { User as UserModel } from '../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AdminUpdateUserDto } from './dto/admin-update-user.dto';
+import { AdminListUsersQueryDto } from './dto/admin-list-users-query.dto';
 
 export interface AdminUserView {
   id: string;
@@ -46,11 +47,24 @@ export class UsersController {
 
   @UseGuards(AdminGuard)
   @Get('admin')
-  async adminList(): Promise<AdminUserView[]> {
-    const users = await this.prisma.user.findMany({
-      orderBy: { createdAt: 'asc' },
-    });
-    return users.map(toAdminView);
+  async adminList(
+    @Query() query: AdminListUsersQueryDto
+  ): Promise<PaginatedResponse<AdminUserView>> {
+    const [total, users] = await this.prisma.$transaction([
+      this.prisma.user.count(),
+      this.prisma.user.findMany({
+        orderBy: { createdAt: 'asc' },
+        skip: (query.page - 1) * query.pageSize,
+        take: query.pageSize,
+      }),
+    ]);
+    return {
+      data: users.map(toAdminView),
+      total,
+      page: query.page,
+      pageSize: query.pageSize,
+      hasNextPage: query.page * query.pageSize < total,
+    };
   }
 
   @UseGuards(AdminGuard)

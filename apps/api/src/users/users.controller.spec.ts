@@ -3,7 +3,8 @@ import { UsersController } from './users.controller';
 
 function makeController() {
   const prisma = {
-    user: { findMany: vi.fn(), update: vi.fn(), delete: vi.fn() },
+    user: { findMany: vi.fn(), update: vi.fn(), delete: vi.fn(), count: vi.fn() },
+    $transaction: vi.fn().mockImplementation((ops: Promise<unknown>[]) => Promise.all(ops)),
   };
   const controller = new UsersController(prisma as never);
   return { controller, prisma };
@@ -19,6 +20,8 @@ function makeUser(overrides: Record<string, unknown> = {}) {
     isPremium: false,
     isAdmin: false,
     stripeCustomerId: null,
+    recommendationCount: 0,
+    recommendationCountDay: null,
     createdAt: new Date('2026-01-01'),
     updatedAt: new Date('2026-01-01'),
     ...overrides,
@@ -26,12 +29,13 @@ function makeUser(overrides: Record<string, unknown> = {}) {
 }
 
 describe('UsersController admin endpoints', () => {
-  it('lists users as admin views', async () => {
+  it('lists users as admin views (paginated)', async () => {
     const { controller, prisma } = makeController();
+    prisma.user.count.mockResolvedValue(1);
     prisma.user.findMany.mockResolvedValue([makeUser()]);
 
-    const result = await controller.adminList();
-    expect(result[0]).toEqual({
+    const result = await controller.adminList({ page: 1, pageSize: 50 });
+    expect(result.data[0]).toEqual({
       id: 'u1',
       email: 'a@example.com',
       displayName: 'A',
@@ -40,6 +44,8 @@ describe('UsersController admin endpoints', () => {
       isAdmin: false,
       createdAt: '2026-01-01T00:00:00.000Z',
     });
+    expect(result.total).toBe(1);
+    expect(result.hasNextPage).toBe(false);
   });
 
   it('updates isPremium for a user', async () => {
