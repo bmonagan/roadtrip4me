@@ -430,23 +430,24 @@ export class TripsService {
 
   // Computes the route and persists distance, duration, and polyline.
   private async computeRoute(tripId: string): Promise<void> {
-    const trip = await this.prisma.trip.findUnique({
-      where: { id: tripId },
-      select: { originLat: true, originLng: true, destLat: true, destLng: true },
-    });
+    // All three reads only need the trip id, so fetch them in parallel.
+    const [trip, waypoints, stops] = await Promise.all([
+      this.prisma.trip.findUnique({
+        where: { id: tripId },
+        select: { originLat: true, originLng: true, destLat: true, destLng: true },
+      }),
+      this.prisma.tripWaypoint.findMany({
+        where: { tripId },
+        orderBy: { order: 'asc' },
+        select: { lat: true, lng: true },
+      }),
+      this.prisma.tripStop.findMany({
+        where: { tripId },
+        orderBy: { order: 'asc' },
+        include: { stop: { select: { lat: true, lng: true } } },
+      }),
+    ]);
     if (!trip) return;
-
-    const waypoints = await this.prisma.tripWaypoint.findMany({
-      where: { tripId },
-      orderBy: { order: 'asc' },
-      select: { lat: true, lng: true },
-    });
-
-    const stops = await this.prisma.tripStop.findMany({
-      where: { tripId },
-      orderBy: { order: 'asc' },
-      include: { stop: { select: { lat: true, lng: true } } },
-    });
 
     const intermediates = [
       ...waypoints.map((w) => ({ lat: w.lat, lng: w.lng })),
