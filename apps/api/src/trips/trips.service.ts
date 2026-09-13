@@ -261,15 +261,19 @@ export class TripsService {
       await tx.$queryRaw`SELECT id FROM trips WHERE id = ${tripId} FOR UPDATE`;
       const result = await tx.tripStop.deleteMany({ where: { tripId, stopId } });
       if (result.count > 0) {
-        // Re-number remaining stops so order stays contiguous (no gaps).
-        const remaining = await tx.tripStop.findMany({
-          where: { tripId },
-          orderBy: { order: 'asc' },
-          select: { id: true },
-        });
-        for (const [index, ts] of remaining.entries()) {
-          await tx.tripStop.update({ where: { id: ts.id }, data: { order: index + 1 } });
-        }
+        // Re-number remaining stops so order stays contiguous (no gaps), in a
+        // single statement instead of one UPDATE per row.
+        await tx.$executeRaw`
+          WITH ordered AS (
+            SELECT id, ROW_NUMBER() OVER (ORDER BY "order") AS new_order
+            FROM trip_stops
+            WHERE "tripId" = ${tripId}
+          )
+          UPDATE trip_stops
+          SET "order" = ordered.new_order
+          FROM ordered
+          WHERE trip_stops.id = ordered.id
+        `;
       }
       return result;
     });
@@ -318,14 +322,19 @@ export class TripsService {
       await tx.$queryRaw`SELECT id FROM trips WHERE id = ${tripId} FOR UPDATE`;
       const result = await tx.tripWaypoint.deleteMany({ where: { id: waypointId, tripId } });
       if (result.count > 0) {
-        const remaining = await tx.tripWaypoint.findMany({
-          where: { tripId },
-          orderBy: { order: 'asc' },
-          select: { id: true },
-        });
-        for (const [index, wp] of remaining.entries()) {
-          await tx.tripWaypoint.update({ where: { id: wp.id }, data: { order: index + 1 } });
-        }
+        // Re-number remaining waypoints so order stays contiguous (no gaps),
+        // in a single statement instead of one UPDATE per row.
+        await tx.$executeRaw`
+          WITH ordered AS (
+            SELECT id, ROW_NUMBER() OVER (ORDER BY "order") AS new_order
+            FROM trip_waypoints
+            WHERE "tripId" = ${tripId}
+          )
+          UPDATE trip_waypoints
+          SET "order" = ordered.new_order
+          FROM ordered
+          WHERE trip_waypoints.id = ordered.id
+        `;
       }
       return result;
     });
