@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import type { PaginatedResponse, Stop, StopWithUserVote } from '../types';
 import { Prisma, type Stop as StopModel } from '../generated/prisma/client';
 import { mapStop } from '../common/mappers/stop.mapper';
@@ -142,12 +142,20 @@ export class StopsService {
   // (e.g. a recommendation that failed to attach to its trip). Community stops
   // others have voted on are protected.
   async remove(userId: string, stopId: string): Promise<{ deleted: true }> {
-    const deleted = await this.prisma.stop.deleteMany({
-      where: { id: stopId, submittedByUserId: userId },
+    const stop = await this.prisma.stop.findUnique({
+      where: { id: stopId },
+      select: { id: true, submittedByUserId: true, voteCount: true },
     });
-    if (deleted.count === 0) {
+    if (!stop || stop.submittedByUserId !== userId) {
       throw new NotFoundException(`Stop ${stopId} not found`);
     }
+    // Community stops others have voted on are protected.
+    if (stop.voteCount > 0) {
+      throw new ConflictException(
+        'This stop has votes and can no longer be deleted'
+      );
+    }
+    await this.prisma.stop.delete({ where: { id: stopId } });
     return { deleted: true };
   }
 }
