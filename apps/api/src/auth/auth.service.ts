@@ -27,26 +27,37 @@ export class AuthService implements OnModuleDestroy {
 
   constructor(private readonly prisma: PrismaService) {}
 
+  // Explicit dev mode: the API trusts the x-user-id header instead of Auth0.
+  get devMode(): boolean {
+    return process.env['AUTH_DISABLED'] === 'true';
+  }
+
   get authEnabled(): boolean {
-    return process.env['AUTH_DISABLED'] !== 'true' && Boolean(process.env['AUTH0_DOMAIN']);
+    return Boolean(process.env['AUTH0_DOMAIN']);
   }
 
   async resolve(rawAuth: string | undefined, userId?: string): Promise<UserModel> {
-    if (this.authEnabled) {
-      const token = this.extractBearer(rawAuth);
-      const verified = await this.verifyToken(token);
-      return this.resolveAccount(verified);
+    if (this.devMode) {
+      // Local dev fallback: trust the x-user-id header.
+      if (!userId) {
+        throw new UnauthorizedException('Missing user identifier');
+      }
+      const user = await this.prisma.user.findUnique({ where: { id: userId } });
+      if (!user) {
+        throw new UnauthorizedException('Unknown user');
+      }
+      return user;
     }
 
-    // Local dev fallback: trust the x-user-id header.
-    if (!userId) {
-      throw new UnauthorizedException('Missing user identifier');
+    // Fail closed: outside dev mode Auth0 must be configured and the token
+    // verified. Never fall back to the x-user-id header (a misconfigured
+    // production would otherwise let any client impersonate any user).
+    if (!this.authEnabled) {
+      throw new UnauthorizedException('Auth is not configured');
     }
-    const user = await this.prisma.user.findUnique({ where: { id: userId } });
-    if (!user) {
-      throw new UnauthorizedException('Unknown user');
-    }
-    return user;
+    const token = this.extractBearer(rawAuth);
+    const verified = await this.verifyToken(token);
+    return this.resolveAccount(verified);
   }
 
   private extractBearer(rawAuth: string | undefined): string {

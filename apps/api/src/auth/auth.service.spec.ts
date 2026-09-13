@@ -41,6 +41,22 @@ describe('AuthService (dev fallback)', () => {
   });
 });
 
+describe('AuthService (fail closed)', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('rejects when not in dev mode and Auth0 is not configured', async () => {
+    process.env['AUTH_DISABLED'] = 'false';
+    process.env['AUTH0_DOMAIN'] = '';
+    const { service } = makeService();
+    // Must NOT fall back to the x-user-id header.
+    await expect(service.resolve(undefined, 'u1')).rejects.toThrow(
+      UnauthorizedException
+    );
+  });
+});
+
 describe('AuthService (auth enabled)', () => {
   afterEach(() => {
     vi.restoreAllMocks();
