@@ -108,6 +108,9 @@ export default function TripMap({ trip }: { trip: Trip }) {
       map.remove();
       mapRef.current = null;
     };
+    // Rebuild only when the route geometry changes (routeSignature), not on
+    // every refetch — the load handler reads the trip's geometry and labels.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [routeSignature]);
 
   if (!MAPBOX_TOKEN) {
