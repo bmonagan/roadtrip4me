@@ -58,17 +58,25 @@ export class RecommendationsController {
       if (isInFlight && !isStale) {
         return { requestId: existing.id, status: existing.status };
       }
-      // completed, failed, or stale — allow refresh
-      await this.prisma.recommendationRequest.delete({ where: { id: existing.id } });
+      // completed, failed, or stale — refresh below.
     }
 
     await this.consumeDailyBudget(user);
 
-    const req = await this.prisma.recommendationRequest.create({
-      data: {
-        tripId,
-        status: 'processing',
-      },
+    // Serialize refreshes per trip (mirrors TripsService) so a concurrent
+    // request can't race the delete+create into the unique (tripId)
+    // constraint. A losing in-flight job finds its row deleted and stops.
+    const req = await this.prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM trips WHERE id = ${tripId} FOR UPDATE`;
+      const current = await tx.recommendationRequest.findUnique({
+        where: { tripId },
+      });
+      if (current) {
+        await tx.recommendationRequest.delete({ where: { id: current.id } });
+      }
+      return tx.recommendationRequest.create({
+        data: { tripId, status: 'processing' },
+      });
     });
 
     // Fire-and-forget background processing with a few retries on transient

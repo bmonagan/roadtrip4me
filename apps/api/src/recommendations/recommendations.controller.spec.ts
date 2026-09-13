@@ -90,27 +90,32 @@ describe('RecommendationsController.request (stale jobs)', () => {
   });
 
   it('restarts an orphaned processing job older than the stale threshold', async () => {
+    const recommendationRequest = {
+      findUnique: vi.fn().mockResolvedValue({
+        id: 'r_stale',
+        status: 'processing',
+        updatedAt: new Date(Date.now() - 11 * 60 * 1000),
+      }),
+      delete: vi.fn().mockResolvedValue({}),
+      create: vi.fn().mockResolvedValue({ id: 'r_new' }),
+      update: vi.fn().mockResolvedValue({}),
+    };
+    const $queryRaw = vi.fn().mockResolvedValue([{ recommendationCount: 1 }]);
+    // Interactive transaction: run the callback against a tx sharing the mocks.
+    const tx = { $queryRaw, recommendationRequest };
     const prisma = {
       user: { update: vi.fn() },
       trip: tripOwnedMock(),
-      $queryRaw: vi.fn().mockResolvedValue([{ recommendationCount: 1 }]),
-      recommendationRequest: {
-        findUnique: vi.fn().mockResolvedValue({
-          id: 'r_stale',
-          status: 'processing',
-          updatedAt: new Date(Date.now() - 11 * 60 * 1000),
-        }),
-        delete: vi.fn().mockResolvedValue({}),
-        create: vi.fn().mockResolvedValue({ id: 'r_new' }),
-        update: vi.fn().mockResolvedValue({}),
-      },
+      $queryRaw,
+      recommendationRequest,
+      $transaction: vi.fn().mockImplementation((cb: (t: unknown) => unknown) => cb(tx)),
     };
     const { controller } = makeController(prisma);
     await controller.request(makeUser() as never, 'u1', 't1', {} as never);
-    expect(prisma.recommendationRequest.delete).toHaveBeenCalledWith({
+    expect(recommendationRequest.delete).toHaveBeenCalledWith({
       where: { id: 'r_stale' },
     });
-    expect(prisma.recommendationRequest.create).toHaveBeenCalled();
+    expect(recommendationRequest.create).toHaveBeenCalled();
   });
 
   it('reports a stale processing job as failed from the status endpoint', async () => {
