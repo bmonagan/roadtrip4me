@@ -63,12 +63,15 @@ export class BillingController {
       customer: user.stripeCustomerId,
     });
 
-    if (subscriptions.data.length === 0) {
+    // list() returns every subscription (including canceled ones); cancel the
+    // one that's actually paying, not just the first row.
+    const activeSub = subscriptions.data.find(
+      (s) => s.status === 'active' || s.status === 'trialing'
+    );
+    if (!activeSub) {
       throw new BadGatewayException('No active subscription found');
     }
-
-    const activeSub = subscriptions.data[0];
-    await this.client(secretKey).subscriptions.cancel(activeSub!.id);
+    await this.client(secretKey).subscriptions.cancel(activeSub.id);
 
     await this.prisma.user.update({
       where: { id: user.id },
