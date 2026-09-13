@@ -38,6 +38,12 @@ export class GoogleMapsService {
       throw new Error('GOOGLE_MAPS_API_KEY is not configured');
     }
 
+    if (intermediates.length > MAX_INTERMEDIATES) {
+      this.logger.warn(
+        `Route has ${intermediates.length} intermediates but the Routes API caps at ${MAX_INTERMEDIATES}; the last ${intermediates.length - MAX_INTERMEDIATES} are omitted from the computed route.`
+      );
+    }
+
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), ROUTE_TIMEOUT_MS);
     const res = await fetch(ROUTES_API_URL, {
