@@ -105,11 +105,11 @@ export class TripsService {
       this.prisma.trip.findMany({
         where,
         orderBy: { createdAt: 'desc' },
-        skip: (query.page - 1) * query.pageSize,
-        take: query.pageSize,
-        include: { tripStops: { select: { order: true } } },
-      }),
-    ]);
+      skip: (query.page - 1) * query.pageSize,
+      take: query.pageSize,
+      include: { _count: { select: { tripStops: true } } },
+    }),
+  ]);
 
     return {
       data: trips.map(toTripSummary),
@@ -536,7 +536,7 @@ function toTripSummary(trip: {
   destLabel: string;
   startDate: Date | null;
   createdAt: Date;
-  tripStops: { order: number }[];
+  _count: { tripStops: number };
 }): TripSummary {
   return {
     id: trip.id,
@@ -544,7 +544,7 @@ function toTripSummary(trip: {
     status: trip.status,
     origin: trip.originLabel,
     destination: trip.destLabel,
-    stopCount: trip.tripStops.length,
+    stopCount: trip._count.tripStops,
     startDate: trip.startDate?.toISOString() ?? null,
     createdAt: trip.createdAt.toISOString(),
   };
