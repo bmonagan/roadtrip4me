@@ -89,7 +89,9 @@ export class RecommendationsService {
 
   private async buildRoute(trip: TripModel): Promise<GeoPoint[]> {
     // Prefer the real driving route when available; fall back to the straight
-    // origin → waypoints → destination line for trips without routing data.
+    // origin → waypoints → stops → destination line for trips without routing
+    // data, matching the intermediates computeRoute sends to the Routes API so
+    // distanceFromRouteMeters is measured against the same route.
     if (trip.encodedPolyline) {
       try {
         const points = decode(trip.encodedPolyline);
@@ -101,13 +103,22 @@ export class RecommendationsService {
       }
     }
 
-    const waypoints = await this.prisma.tripWaypoint.findMany({
-      where: { tripId: trip.id },
-      orderBy: { order: 'asc' },
-    });
+    const [waypoints, stops] = await Promise.all([
+      this.prisma.tripWaypoint.findMany({
+        where: { tripId: trip.id },
+        orderBy: { order: 'asc' },
+        select: { lat: true, lng: true },
+      }),
+      this.prisma.tripStop.findMany({
+        where: { tripId: trip.id },
+        orderBy: { order: 'asc' },
+        include: { stop: { select: { lat: true, lng: true } } },
+      }),
+    ]);
     return [
       { lat: trip.originLat, lng: trip.originLng },
       ...waypoints.map((w) => ({ lat: w.lat, lng: w.lng })),
+      ...stops.map((s) => ({ lat: s.stop.lat, lng: s.stop.lng })),
       { lat: trip.destLat, lng: trip.destLng },
     ];
   }

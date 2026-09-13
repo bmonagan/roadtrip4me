@@ -24,6 +24,7 @@ function routeCoordinates(trip: Trip): [number, number][] {
   }
   return [
     [trip.origin.lng, trip.origin.lat],
+    ...trip.waypoints.map((w) => [w.coordinates.lng, w.coordinates.lat] as [number, number]),
     ...trip.stops.map((s) => [s.coordinates.lng, s.coordinates.lat] as [number, number]),
     [trip.destination.lng, trip.destination.lat],
   ];
@@ -34,10 +35,15 @@ export default function TripMap({ trip }: { trip: Trip }) {
   const mapRef = useRef<mapboxgl.Map | null>(null);
 
   // Rebuild the map only when the route geometry actually changes (new polyline
-  // from background routing, stops added/removed), not on every refetch.
-  const routeSignature = `${trip.encodedPolyline ?? ''}|${trip.origin.lat},${trip.origin.lng}|${trip.destination.lat},${trip.destination.lng}|${trip.stops
-    .map((s) => `${s.coordinates.lat},${s.coordinates.lng}`)
-    .join(';')}`;
+  // from background routing, waypoints/stops added/removed), not on every
+  // refetch.
+  const routeSignature = [
+    trip.encodedPolyline ?? '',
+    `${trip.origin.lat},${trip.origin.lng}`,
+    `${trip.destination.lat},${trip.destination.lng}`,
+    trip.waypoints.map((w) => `${w.coordinates.lat},${w.coordinates.lng}`).join(';'),
+    trip.stops.map((s) => `${s.coordinates.lat},${s.coordinates.lng}`).join(';'),
+  ].join('|');
 
   useEffect(() => {
     if (!containerRef.current) return;
