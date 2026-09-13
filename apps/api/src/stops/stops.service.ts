@@ -35,7 +35,8 @@ export class StopsService {
       this.prisma.stop.count({ where }),
       this.prisma.stop.findMany({
         where,
-        orderBy: { score: 'desc' },
+        // Tie-break on id so equal-score rows don't shift between pages.
+        orderBy: [{ score: 'desc' }, { id: 'asc' }],
         skip: (query.page - 1) * query.pageSize,
         take: query.pageSize,
       }),
