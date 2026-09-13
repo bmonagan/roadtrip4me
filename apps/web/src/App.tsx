@@ -26,7 +26,7 @@ const AdminPage = lazy(() => import('./pages/AdminPage'));
 export default function App() {
   const queryClient = useQueryClient();
   const [searchParams] = useSearchParams();
-  const { authMode, isAuthenticated, token } = useAuth();
+  const { authMode, isAuthenticated, token, devUserId } = useAuth();
 
   const { data: me } = useQuery({
     queryKey: ['me'],
@@ -48,14 +48,16 @@ export default function App() {
   }, [searchParams, queryClient]);
 
   // Clear the cache when the auth identity changes so stale data from a
-  // previous user/login is never shown to the next one.
-  const prevToken = useRef(token);
+  // previous user/login is never shown to the next one. In dev mode the token
+  // stays null and the identity is the dev user id, so watch both.
+  const identity = `${token ?? ''}|${devUserId ?? ''}`;
+  const prevIdentity = useRef(identity);
   useEffect(() => {
-    if (prevToken.current !== token) {
+    if (prevIdentity.current !== identity) {
       queryClient.clear();
-      prevToken.current = token;
+      prevIdentity.current = identity;
     }
-  }, [token, queryClient]);
+  }, [identity, queryClient]);
 
   return (
     <ToastProvider>
