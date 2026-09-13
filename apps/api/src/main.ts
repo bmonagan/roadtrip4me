@@ -10,7 +10,16 @@ import { AppModule } from './app.module';
 
 function corsOrigins(): string | string[] {
   const raw = process.env['CORS_ORIGIN'];
-  if (!raw || raw.trim() === '*') return '*';
+  const isProd = process.env['NODE_ENV'] === 'production';
+  if (!raw || raw.trim() === '') {
+    // Fail closed in production: an unset CORS_ORIGIN must not silently open
+    // the API to every origin. Dev falls back to permissive CORS.
+    if (isProd) {
+      throw new Error('CORS_ORIGIN must be set in production');
+    }
+    return '*';
+  }
+  if (raw.trim() === '*') return '*';
   return raw
     .split(',')
     .map((s) => s.trim())
