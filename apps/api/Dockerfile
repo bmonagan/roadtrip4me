@@ -1,14 +1,16 @@
 # Roadtrip4me API — production image.
-# Build context is apps/api/ (Fly app root)
+# Build context is the repo root (see .github/workflows/deploy.yml), so the
+# shared @roadtrip4me/types package is available.
 
 FROM oven/bun:1 AS build
 WORKDIR /app
-COPY package.json bun.lock packages/ ./
-COPY prisma.config.js ./
-COPY prisma/ ./prisma/
-COPY src/ ./src/
-COPY tsconfig.json ./
-RUN bun install --frozen-lockfile \
+COPY packages/types ./packages/types
+COPY apps/api/package.docker.json ./package.json
+COPY apps/api/prisma.config.js ./
+COPY apps/api/prisma/ ./prisma/
+COPY apps/api/src/ ./src/
+COPY apps/api/tsconfig.json ./
+RUN bun install \
   && bunx prisma generate \
   && bun run build
 

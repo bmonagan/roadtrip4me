@@ -1,5 +1,6 @@
-node_modules
-dist
+# Build context is the repo root for both apps.
+**/node_modules
+**/dist
 .git
 *.log
 .env
@@ -7,5 +8,3 @@ dist
 notes
 coverage
 apps/api/src/generated
-apps/web/dist
-apps/api/dist

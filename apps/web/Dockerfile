@@ -1,15 +1,16 @@
 # Roadtrip4me web — SPA served by nginx
-# Build context is apps/web/ (Fly app root)
+# Build context is the repo root (see .github/workflows/deploy.yml), so the
+# shared @roadtrip4me/types package is available.
 
 FROM oven/bun:1 AS build
 RUN useradd --create-home --shell /bin/sh appuser
 WORKDIR /app
 COPY packages/types ./packages/types
-COPY package.docker.json package.json
-COPY tsconfig.json vite.config.ts index.html ./
-COPY public/ ./public/
-COPY src/ ./src/
-COPY nginx.conf ./
+COPY apps/web/package.docker.json ./package.json
+COPY apps/web/tsconfig.json apps/web/vite.config.ts apps/web/index.html ./
+COPY apps/web/public/ ./public/
+COPY apps/web/src/ ./src/
+COPY apps/web/nginx.conf ./
 
 RUN --mount=type=cache,target=/root/.bun/install/cache bun install
 

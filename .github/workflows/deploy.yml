@@ -46,8 +46,9 @@ jobs:
       - uses: superfly/flyctl-actions/setup-flyctl@master
 
       - name: Deploy API
-        run: flyctl deploy --remote-only --app roadtrip4me-api --dockerfile Dockerfile
-        working-directory: apps/api
+        run: >
+          flyctl deploy . --remote-only --app roadtrip4me-api
+          --config apps/api/fly.toml --dockerfile apps/api/Dockerfile
 
       - name: Set Fly secrets (API)
         run: |
@@ -74,9 +75,9 @@ jobs:
       # passed as Docker build args (not runtime secrets).
       - name: Deploy Web
         run: |
-          flyctl deploy --remote-only --app roadtrip4me-web --dockerfile Dockerfile \
+          flyctl deploy . --remote-only --app roadtrip4me-web \
+            --config apps/web/fly.toml --dockerfile apps/web/Dockerfile \
             --build-arg VITE_MAPBOX_TOKEN=${{ secrets.VITE_MAPBOX_TOKEN }} \
             --build-arg VITE_API_URL=https://api.roadtrip4me.com \
             --build-arg VITE_AUTH0_DOMAIN=${{ secrets.VITE_AUTH0_DOMAIN }} \
             --build-arg VITE_AUTH0_CLIENT_ID=${{ secrets.VITE_AUTH0_CLIENT_ID }}
-        working-directory: apps/web
