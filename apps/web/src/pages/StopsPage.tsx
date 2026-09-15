@@ -8,6 +8,7 @@ import { useAuth } from '../auth/AuthContext';
 import VoteButtons from '../components/VoteButtons';
 import AddToTrip from '../components/AddToTrip';
 import AddStopForm from '../components/AddStopForm';
+import NearbyAccommodations from '../components/NearbyAccommodations';
 import LoadingBanner from '../components/LoadingBanner';
 
 const CATEGORIES = [
@@ -104,6 +105,8 @@ export default function StopsPage() {
           ))}
         </ul>
       )}
+
+      <NearbyAccommodations />
     </div>
   );
 }

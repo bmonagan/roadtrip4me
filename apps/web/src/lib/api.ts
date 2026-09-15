@@ -112,6 +112,12 @@ export interface NearbyStopsParams {
   limit?: number;
 }
 
+export interface NearbyAccommodationsParams {
+  city: string;
+  lat: number;
+  lng: number;
+}
+
 export interface ListTripsParams {
   page?: number;
   pageSize?: number;
@@ -231,6 +237,10 @@ export const api = {
         }),
       status: (id: string) => request<RecommendationsStatus>(`/trips/${id}/recommendations`),
     },
+  },
+  accommodations: {
+    nearby: (params: NearbyAccommodationsParams) =>
+      request<AffiliateCard[]>(`/accommodations/nearby${toQueryString(params)}`),
   },
   stops: {
     list: (params?: ListStopsParams) =>

@@ -236,6 +236,32 @@ a {
   font-weight: 700;
 }
 
+/* ─── Accommodations ──────────────────────────────────────────────────────── */
+
+.accommodation-card {
+  align-items: center;
+}
+.accommodation-image {
+  width: 96px;
+  height: 72px;
+  object-fit: cover;
+  border-radius: var(--radius-md);
+  flex-shrink: 0;
+}
+.accommodation-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  margin-top: 0.35rem;
+  font-weight: 700;
+}
+.accommodation-rating {
+  color: var(--color-on-surface-variant);
+}
+.accommodation-card .btn {
+  align-self: center;
+}
+
 /* ─── Buttons ─────────────────────────────────────────────────────────────── */
 
 .btn {
