@@ -1,5 +1,6 @@
 import { Controller, Get, Param, Query } from '@nestjs/common';
 import { CurrentUserId } from '../auth/current-user.decorator';
+import { Public } from '../auth/public.decorator';
 import { AffiliateService } from './affiliate.service';
 
 @Controller('trips')
@@ -19,7 +20,9 @@ export class AccommodationsController {
   /**
    * Hotels near a destination. `city` is required (e.g. "Chicago, IL"); the
    * coordinates are passed through to the live inventory API when configured.
+   * Public so the Stops page can show hotels to signed-out visitors.
    */
+  @Public()
   @Get('nearby')
   nearby(
     @Query('city') city?: string,
