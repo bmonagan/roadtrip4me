@@ -1,20 +1,21 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import type { AffiliateCard } from '../types';
-import type { Stop as StopModel } from '../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { BookingProvider } from './booking.provider';
+import { ExpediaProvider } from './expedia.provider';
+import { destinationLabel, type AccommodationQuery } from './query';
 
-// Affiliate deeplinks — no inventory/pricing is fetched (that requires live
-// Booking.com/Expedia affiliate APIs). Cards link to provider search pages for
-// the stop's city with the configured affiliate id; pricing is left null until
-// a real feed is wired up.
-//
-// To upgrade to live pricing later: swap these deeplink builders for calls to
-// the provider API (Booking.com affiliate hotel search or Expedia Rapid
-// /properties) and fill pricePerNight/rating/reviewCount/imageUrl on the card.
-
+// Accommodation recommendations for a trip or an arbitrary destination. Cards
+// are affiliate deeplinks by default; when the Booking.com Affiliate API is
+// configured, live hotels (price/rating/image) replace the deeplink for that
+// city. See docs/affiliate-integration.md.
 @Injectable()
 export class AffiliateService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly booking: BookingProvider,
+    private readonly expedia: ExpediaProvider
+  ) {}
 
   async getAccommodations(userId: string, tripId: string): Promise<AffiliateCard[]> {
     const trip = await this.prisma.trip.findFirst({
@@ -30,65 +31,46 @@ export class AffiliateService {
       throw new NotFoundException(`Trip ${tripId} not found`);
     }
 
-    // One card per provider per destination city — a multi-stop trip that
-    // visits the same city twice shouldn't produce duplicate hotel links.
+    // One group of cards per destination city — a multi-stop trip that visits
+    // the same city twice shouldn't produce duplicate hotel links.
     const seen = new Set<string>();
-    const cards: AffiliateCard[] = [];
+    const queries: AccommodationQuery[] = [];
     for (const ts of trip.tripStops) {
       const key = `${ts.stop.city}|${ts.stop.state}`;
       if (seen.has(key)) continue;
       seen.add(key);
-
-      const booking = this.bookingLink(ts.stop);
-      const expedia = this.expediaLink(ts.stop);
-      if (booking) cards.push(booking);
-      if (expedia) cards.push(expedia);
+      queries.push({
+        destination: destinationLabel(ts.stop.city, ts.stop.state),
+        lat: ts.stop.lat,
+        lng: ts.stop.lng,
+      });
     }
-    return cards;
+    return this.cardsFor(queries);
   }
 
-  private bookingLink(stop: StopModel): AffiliateCard | null {
-    const aid = process.env['BOOKING_COM_AFFILIATE_ID'];
-    if (!aid) return null;
-    const params = new URLSearchParams({
-      ss: `${stop.city}, ${stop.state}`,
-      aid,
-      // Sub-account id lets partners split traffic across campaigns.
-      ...(process.env['BOOKING_COM_SID'] && { sid: process.env['BOOKING_COM_SID'] }),
-    });
-    return {
-      provider: 'booking_com',
-      name: `Hotels in ${stop.city}`,
-      imageUrl: null,
-      pricePerNight: null,
-      currency: 'USD',
-      rating: null,
-      reviewCount: null,
-      affiliateUrl: `https://www.booking.com/searchresults.html?${params.toString()}`,
-      coordinates: { lat: stop.lat, lng: stop.lng },
-    };
+  /**
+   * Accommodations for an arbitrary destination. `city` is required: without it
+   * there is nothing to search on (and reverse-geocoding coordinates would add
+   * a paid Google call), so an empty destination returns no cards.
+   */
+  async getNearbyAccommodations(
+    city: string | undefined,
+    lat: number,
+    lng: number
+  ): Promise<AffiliateCard[]> {
+    const destination = city?.trim();
+    if (!destination) return [];
+    return this.cardsFor([{ destination, lat, lng }]);
   }
 
-  private expediaLink(stop: StopModel): AffiliateCard | null {
-    const aid = process.env['EXPEDIA_AFFILIATE_ID'];
-    if (!aid) return null;
-    const params = new URLSearchParams({
-      destination: `${stop.city}, ${stop.state}`,
-      affcid: aid,
-      // Travel Redirect-style deep link that keeps the traveler on Expedia for
-      // the final booking; no separate inventory API required.
-      ...(process.env['EXPEDIA_TRAVELER_ID'] && { tenant: process.env['EXPEDIA_TRAVELER_ID'] }),
-    });
-    return {
-      provider: 'expedia',
-      name: `Hotels in ${stop.city}`,
-      imageUrl: null,
-      pricePerNight: null,
-      currency: 'USD',
-      rating: null,
-      reviewCount: null,
-      affiliateUrl: `https://www.expedia.com/Hotel-Search?${params.toString()}`,
-      coordinates: { lat: stop.lat, lng: stop.lng },
-    };
+  private async cardsFor(queries: AccommodationQuery[]): Promise<AffiliateCard[]> {
+    const groups = await Promise.all(
+      queries.map(async (query) => {
+        const booking = await this.booking.cards(query);
+        const expedia = this.expedia.deeplink(query);
+        return expedia ? [...booking, expedia] : booking;
+      })
+    );
+    return groups.flat();
   }
 }

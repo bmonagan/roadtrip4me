@@ -1,12 +1,14 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { AffiliateService } from './affiliate.service';
+import { BookingProvider } from './booking.provider';
+import { ExpediaProvider } from './expedia.provider';
 
 function makeService(overrides: Record<string, unknown> = {}) {
   const prisma = {
     trip: { findFirst: vi.fn() },
     ...overrides,
   };
-  const service = new AffiliateService(prisma as never);
+  const service = new AffiliateService(prisma as never, new BookingProvider(), new ExpediaProvider());
   return { service, prisma };
 }
 
@@ -19,6 +21,7 @@ describe('AffiliateService.getAccommodations', () => {
     vi.restoreAllMocks();
     delete process.env['BOOKING_COM_AFFILIATE_ID'];
     delete process.env['EXPEDIA_AFFILIATE_ID'];
+    delete process.env['BOOKING_COM_API_ENABLED'];
   });
 
   it('returns one card per provider per destination city (dedupes repeat cities)', async () => {
@@ -37,8 +40,8 @@ describe('AffiliateService.getAccommodations', () => {
     // 2 cities × 2 providers = 4 cards
     expect(cards).toHaveLength(4);
     const cities = cards.map((c) => c.name);
-    expect(cities.filter((n) => n === 'Hotels in Chicago')).toHaveLength(2); // booking + expedia
-    expect(cities.filter((n) => n === 'Hotels in Springfield')).toHaveLength(2);
+    expect(cities.filter((n) => n === 'Hotels in Chicago, IL')).toHaveLength(2); // booking + expedia
+    expect(cities.filter((n) => n === 'Hotels in Springfield, IL')).toHaveLength(2);
   });
 
   it('includes the affiliate id in Booking.com and Expedia links', async () => {
@@ -85,5 +88,35 @@ describe('AffiliateService.getAccommodations', () => {
 
     const cards = await service.getAccommodations('u1', 't1');
     expect(cards).toHaveLength(0);
+  });
+
+  it('throws NotFoundException for a trip the user cannot see', async () => {
+    const { service, prisma } = makeService();
+    prisma.trip.findFirst.mockResolvedValue(null);
+    await expect(service.getAccommodations('u1', 'missing')).rejects.toThrow('not found');
+  });
+});
+
+describe('AffiliateService.getNearbyAccommodations', () => {
+  afterEach(() => {
+    delete process.env['BOOKING_COM_AFFILIATE_ID'];
+    delete process.env['EXPEDIA_AFFILIATE_ID'];
+  });
+
+  it('returns cards for the destination', async () => {
+    process.env['BOOKING_COM_AFFILIATE_ID'] = 'bookaid';
+    const { service } = makeService();
+    const cards = await service.getNearbyAccommodations('Austin, TX', 30.27, -97.74);
+    expect(cards).toHaveLength(1);
+    expect(cards[0]!.provider).toBe('booking_com');
+    expect(cards[0]!.coordinates).toEqual({ lat: 30.27, lng: -97.74 });
+    expect(cards[0]!.affiliateUrl).toContain('ss=Austin%2C+TX');
+  });
+
+  it('returns no cards when no destination is provided', async () => {
+    process.env['BOOKING_COM_AFFILIATE_ID'] = 'bookaid';
+    const { service } = makeService();
+    expect(await service.getNearbyAccommodations(undefined, 1, 2)).toHaveLength(0);
+    expect(await service.getNearbyAccommodations('   ', 1, 2)).toHaveLength(0);
   });
 });
