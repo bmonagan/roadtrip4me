@@ -25,6 +25,6 @@ COPY --from=build --chown=appuser:appuser /app/package.json ./package.json
 
 USER appuser
 EXPOSE 3000
-COPY --chown=appuser:appuser docker-entrypoint.sh /docker-entrypoint.sh
+COPY --chown=appuser:appuser apps/api/docker-entrypoint.sh /docker-entrypoint.sh
 RUN chmod +x /docker-entrypoint.sh
 ENTRYPOINT ["/docker-entrypoint.sh"]
