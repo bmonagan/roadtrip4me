@@ -58,16 +58,6 @@ export interface StopWithUserVote extends Stop {
   userVote: 1 | -1 | null; // Current user's vote, if authenticated
 }
 
-// ─── Vote ────────────────────────────────────────────────────────────────────
-
-export interface Vote {
-  id: string;
-  userId: string;
-  stopId: string;
-  value: 1 | -1;
-  createdAt: string;
-}
-
 // ─── Trip ────────────────────────────────────────────────────────────────────
 
 export type TripStatus = 'draft' | 'planned' | 'in_progress' | 'completed';
@@ -131,17 +121,6 @@ export interface StopRecommendation {
   distanceFromRouteMeters: number;
 }
 
-export interface RecommendationRequest {
-  tripId: string;
-  vibes: TripVibe[];
-  maxDetourMinutes: number;
-  preferences: {
-    avoidHighways: boolean;
-    preferNationalParks: boolean;
-    foodPreferences: string[];
-  };
-}
-
 // ─── Affiliate ───────────────────────────────────────────────────────────────
 
 export interface AffiliateCard {
@@ -158,23 +137,12 @@ export interface AffiliateCard {
 
 // ─── API Responses ───────────────────────────────────────────────────────────
 
-export interface ApiResponse<T> {
-  data: T;
-  message?: string;
-}
-
 export interface PaginatedResponse<T> {
   data: T[];
   total: number;
   page: number;
   pageSize: number;
   hasNextPage: boolean;
-}
-
-export interface ApiError {
-  statusCode: number;
-  message: string;
-  error: string;
 }
 
 // ─── Billing ────────────────────────────────────────────────────────────────

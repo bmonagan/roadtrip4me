@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { mapStop } from './mappers/stop.mapper';
+import { mapStop } from './stop.mapper';
 
 describe('mapStop', () => {
   it('maps a prisma row to the shared Stop shape', () => {
