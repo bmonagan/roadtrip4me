@@ -1,4 +1,4 @@
-import type { Stop } from '../../types';
+import type { Stop } from '@roadtrip4me/types';
 
 export type StopRecord = {
   id: string;

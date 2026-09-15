@@ -9,7 +9,7 @@ import {
   MinLength,
   ValidateNested,
 } from 'class-validator';
-import type { TripStatus, TripVibe } from '../../types';
+import type { TripStatus, TripVibe } from '@roadtrip4me/types';
 import { PlaceDto } from './create-trip.dto';
 import { IsAfterDate } from '../../common/validators/is-after-date.validator';
 

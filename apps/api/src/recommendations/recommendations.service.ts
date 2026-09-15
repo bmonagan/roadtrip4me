@@ -1,6 +1,6 @@
 import { BadGatewayException, Injectable, NotFoundException } from '@nestjs/common';
 import { decode } from '@googlemaps/polyline-codec';
-import type { StopRecommendation } from '../types';
+import type { StopRecommendation } from '@roadtrip4me/types';
 import type { Trip as TripModel } from '../generated/prisma/client';
 import { distanceToRouteMeters, type GeoPoint } from '../common/geo';
 import { PrismaService } from '../prisma/prisma.service';

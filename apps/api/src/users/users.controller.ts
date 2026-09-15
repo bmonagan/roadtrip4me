@@ -1,5 +1,5 @@
 import { BadRequestException, Body, Controller, Delete, Get, Param, Patch, Query, UseGuards } from '@nestjs/common';
-import type { PaginatedResponse, User } from '../types';
+import type { PaginatedResponse, User } from '@roadtrip4me/types';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { AdminGuard } from '../auth/admin.guard';
 import type { User as UserModel } from '../generated/prisma/client';

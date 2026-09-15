@@ -2,7 +2,6 @@
   "name": "@roadtrip4me/api",
   "version": "0.0.1",
   "private": true,
-  "workspaces": ["packages/*"],
   "scripts": {
     "dev": "bun run --watch src/main.ts",
     "build": "tsc",
@@ -21,6 +20,7 @@
     "@prisma/adapter-pg": "^7.9.1",
     "@prisma/client": "^7.9.1",
     "@prisma/config": "^7.9.1",
+    "@roadtrip4me/types": "workspace:*",
     "@types/pg": "^8.21.0",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.15.1",

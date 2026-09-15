@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import type { AffiliateCard } from '../types';
+import type { AffiliateCard } from '@roadtrip4me/types';
 import type { AccommodationQuery } from './query';
 
 /**

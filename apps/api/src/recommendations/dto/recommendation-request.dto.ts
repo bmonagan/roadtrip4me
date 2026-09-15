@@ -11,7 +11,7 @@ import {
   Min,
   ValidateNested,
 } from 'class-validator';
-import type { TripVibe } from '../../types';
+import type { TripVibe } from '@roadtrip4me/types';
 
 const TRIP_VIBES = ['scenic', 'foodie', 'adventure', 'historic', 'relaxed', 'family'] as const;
 

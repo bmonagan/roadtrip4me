@@ -8,8 +8,7 @@
     "outDir": "./dist",
     "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"],
-      "@roadtrip4me/types": ["packages/types/src/index"]
+      "@/*": ["src/*"]
     },
     "noUnusedLocals": false,
     "noUnusedParameters": false,

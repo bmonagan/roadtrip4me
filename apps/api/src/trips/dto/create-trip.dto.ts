@@ -12,7 +12,7 @@ import {
   MinLength,
   ValidateNested,
 } from 'class-validator';
-import type { TripStatus, TripVibe } from '../../types';
+import type { TripStatus, TripVibe } from '@roadtrip4me/types';
 import { IsAfterDate } from '../../common/validators/is-after-date.validator';
 
 const TRIP_STATUSES = ['draft', 'planned', 'in_progress', 'completed'] as const;

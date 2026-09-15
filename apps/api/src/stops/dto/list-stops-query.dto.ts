@@ -1,6 +1,6 @@
 import { Type } from 'class-transformer';
 import { IsIn, IsInt, IsOptional, IsString, Max, MaxLength, Min } from 'class-validator';
-import type { StopCategory } from '../../types';
+import type { StopCategory } from '@roadtrip4me/types';
 
 const STOP_CATEGORIES = [
   'restaurant',

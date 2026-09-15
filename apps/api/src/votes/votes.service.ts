@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import type { StopWithUserVote } from '../types';
+import type { StopWithUserVote } from '@roadtrip4me/types';
 import type { Prisma } from '../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { mapStop } from '../common/mappers/stop.mapper';

@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import type { AffiliateCard } from '../types';
+import type { AffiliateCard } from '@roadtrip4me/types';
 import { PrismaService } from '../prisma/prisma.service';
 import { BookingProvider } from './booking.provider';
 import { ExpediaProvider } from './expedia.provider';

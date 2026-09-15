@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import type { AffiliateCard } from '../types';
+import type { AffiliateCard } from '@roadtrip4me/types';
 import { TtlCache } from '../common/ttl-cache';
 import type { AccommodationQuery } from './query';
 
