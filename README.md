@@ -176,6 +176,6 @@ full reference.
 | DeepSeek | AI stop recommendations | [platform.deepseek.com](https://platform.deepseek.com) |
 | Auth0 | Authentication | [auth0.com](https://auth0.com) |
 | Stripe | Premium subscriptions | [dashboard.stripe.com](https://dashboard.stripe.com) |
-| Booking.com | Hotel affiliate deeplinks | [booking.com/affiliate](https://www.booking.com/affiliate) |
+| Booking.com | Hotel affiliate deeplinks (live inventory opt-in) | [booking.com/affiliate](https://www.booking.com/affiliate) |
 
 See `docs/affiliate-integration.md` for the affiliate plan.

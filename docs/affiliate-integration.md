@@ -1,27 +1,49 @@
 # Affiliate / Referral Integration — Findings & Implementation Plan
 
-Status: **research + scaffolding done** (run-time fix #1). Integration requires
-partner approval and API keys before real inventory/pricing can be shown.
+Status: **partner application submitted, awaiting approval.** The full code path
+(deeplinks + live-inventory provider + UI) is in place and tested; going live is
+a secrets-only change. Until `BOOKING_COM_AFFILIATE_ID` is set the "Where to
+stay" sections render nothing.
 
 ## Current state
 
-`apps/api/src/affiliate/affiliate.service.ts` generates **deeplinks only**:
+`apps/api/src/affiliate/` is split into providers orchestrated by
+`affiliate.service.ts`:
 
-- `GET /api/v1/trips/:id/accommodations` → list of `AffiliateCard`s.
-- Each card links to a Booking.com or Expedia **search-results page** for the
-  stop's city, tagged with the configured affiliate id.
-- `pricePerNight`, `rating`, `reviewCount`, `imageUrl` are all `null` — no real
-  inventory is fetched.
+- `booking.provider.ts` — Booking.com. Two modes:
+  - **Deeplink** (default): an affiliate-tagged `searchresults.html` URL.
+  - **Live API** (opt-in via `BOOKING_COM_API_ENABLED=true` + URL/token): real
+    hotels with `pricePerNight`, `currency`, `rating`, `reviewCount`,
+    `imageUrl`. Any error/timeout falls back to the deeplink, and responses are
+    cached in-process for 6h (`common/ttl-cache.ts`, no Redis).
+- `expedia.provider.ts` — Expedia referral deeplinks (no inventory API).
 
-Rendered by `apps/web/src/components/Accommodations.tsx` ("Where to stay"
-section on the trip detail page, visible to any user who can view the trip).
+Endpoints:
+
+- `GET /api/v1/trips/:id/accommodations` → cards for the trip's stop cities
+  (deduped by city; auth required, must be able to view the trip).
+- `GET /api/v1/accommodations/nearby?city=&lat=&lng=` → cards for an arbitrary
+  destination (public, used by the Stops page). `city` is required — reverse
+  geocoding would add a paid Google call.
+
+Web:
+
+- `Accommodations.tsx` (trip detail) and `NearbyAccommodations.tsx` (Stops page)
+  both render `AccommodationList.tsx`, which shows image/price/rating when the
+  live provider returns them and a plain deeplink card otherwise.
+- Links carry `rel="noopener noreferrer sponsored"` (FTC disclosure).
+
+### What was improved in earlier runs
+- Cards deduped by destination city.
+- Booking.com `sid` sub-account id and Expedia Travel Redirect `tenant` id are
+  configurable via env.
+- `affiliate.service.spec.ts`, `booking.provider.spec.ts`, `ttl-cache.spec.ts`.
 
 ### What was improved this run
-- Cards are now **deduped by destination city** (a trip visiting the same city
-  multiple times no longer shows N×2 duplicate hotel links).
-- Booking.com links accept an optional `sid` sub-account id; Expedia links
-  accept an optional Travel Redirect `tenant` id — both configurable via env.
-- Added `affiliate.service.spec.ts` (dedupe + link params + config fallbacks).
+- Provider abstraction with live-inventory support behind a feature flag and
+  deeplink fallback; bounded in-process TTL cache + in-flight request dedupe.
+- `GET /accommodations/nearby` and the Stops-page "Where to stay" search.
+- The UI now renders price/rating/review/image (previously ignored).
 
 ## Options to get real inventory + commission
 
@@ -52,23 +74,26 @@ section on the trip detail page, visible to any user who can view the trip).
 
 Start with **Booking.com affiliate deeplinks (Option A)** — zero API work, the
 existing `affiliateUrl` already carries the `aid`. Once approved for the
-**Affiliate API**, replace the deeplink builders in `affiliate.service.ts` with
-a hotel-search call and populate:
-
-- `imageUrl`, `pricePerNight`, `currency`, `rating`, `reviewCount`
-- keep `affiliateUrl` (now a per-hotel or search-result link)
-
-The `AffiliateCard` type already has all these fields (see
-`packages/types/src/index.ts:146`).
+**Affiliate API**, set `BOOKING_COM_API_ENABLED=true`, `BOOKING_COM_API_URL` and
+`BOOKING_COM_API_TOKEN`; `BookingProvider.search()` then populates
+`imageUrl`, `pricePerNight`, `currency`, `rating`, `reviewCount` automatically.
+Confirm the exact endpoint/auth scheme (the plan doc mentions an `X-Metadata`
+signature) against the onboarding pack and adjust `fetchHotels()` in
+`apps/api/src/affiliate/booking.provider.ts` — it is the single integration point.
 
 ## TODO when implementing
 
-1. Obtain `aid` (Booking) and/or EPS Travel Redirect credentials.
-2. Set the new env vars on the API app (Fly secrets):
-   `BOOKING_COM_SID`, `EXPEDIA_TRAVELER_ID`, and any API/redirect secrets.
-3. Extend `AffiliateService` to call the provider API and populate the pricing
-   fields (Option A/B/C above).
-4. Optionally cache provider responses (they change hourly) — note: the repo
-   intentionally avoids Redis, so use an in-process TTL cache or DB.
-5. Consider adding `GET /api/v1/accommodations` search-by-coordinates (not just
-   by trip) so the map page can show nearby hotels.
+1. ~~Provider abstraction + deeplink fallback~~ **DONE**
+   (`booking.provider.ts`, `expedia.provider.ts`).
+2. ~~Populate pricing fields + render them in the UI~~ **DONE**
+   (`AccommodationList.tsx`); verify against real API once approved.
+3. ~~In-process TTL cache (no Redis)~~ **DONE** (`common/ttl-cache.ts`, 6h TTL).
+4. ~~`GET /accommodations/nearby` search-by-coordinates~~ **DONE** (requires a
+   `city`; live API also receives lat/lng).
+5. **Remaining (credential-gated):**
+   - Obtain `aid`; set `BOOKING_COM_AFFILIATE_ID` (+ optional `SID`) as Fly
+     secrets and verify commissionable deeplinks end-to-end.
+   - On Affiliate API approval, set `BOOKING_COM_API_ENABLED` / `_URL` /
+     `_TOKEN` and validate `fetchHotels()` against the real response shape.
+   - Consider per-hotel deeplinks (currently the fallback URL is a city search)
+     and a daily cap / monitoring on live API calls.
