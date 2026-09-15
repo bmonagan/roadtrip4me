@@ -26,7 +26,6 @@ subscriptions.
 roadtrip4me/
 ├── apps/
 │   ├── web/            React + Vite SPA (deployed to Fly.io)
-│   │   └── packages/   types/ — shared types copy used by the Docker build
 │   └── api/            NestJS backend (deployed to Fly.io)
 │       ├── prisma/     schema + migrations
 │       └── src/        API source (auth, trips, stops, votes, billing, …)
@@ -145,11 +144,15 @@ API and web. The API applies migrations on boot (`prisma migrate deploy`).
 **To deploy manually:**
 
 ```bash
+# Run from the repo root — the build context is the whole monorepo.
+
 # API
-cd apps/api && fly deploy --remote-only --app roadtrip4me-api --dockerfile Dockerfile
+fly deploy . --remote-only --app roadtrip4me-api \
+  --config apps/api/fly.toml --dockerfile apps/api/Dockerfile
 
 # Web
-cd apps/web && fly deploy --remote-only --app roadtrip4me-web --dockerfile Dockerfile
+fly deploy . --remote-only --app roadtrip4me-web \
+  --config apps/web/fly.toml --dockerfile apps/web/Dockerfile
 ```
 
 **To stop everything (no compute, keeps the DB volume):**

@@ -2,9 +2,11 @@
 
 ## Authentication
 
-- **Auth0 (Authorization Code + PKCE)** verifies access tokens via the tenant JWKS
-  (`jose`, RS256). Tokens are required on all non-public routes; the `sub`
-  claim is resolved to a `User` row via `authId`.
+- **Auth0 (Authorization Code + PKCE)**. Tokens are required on all non-public
+  routes. The API detects the token format: JWT access tokens (when a custom API
+  audience is configured) are verified against the tenant JWKS (`jose`, RS256);
+  opaque tokens are validated against Auth0's `/userinfo` endpoint (cached 60s).
+  The `sub` claim is resolved to a `User` row via `authId`.
 - **Dev fallback:** while `AUTH_DISABLED=true` (default in local `.env`) the API
   trusts the `x-user-id` header for the seeded dev users. **Set
   `AUTH_DISABLED=false` plus `AUTH0_DOMAIN`/`AUTH0_AUDIENCE` in any environment
@@ -30,9 +32,10 @@
 ## CORS
 
 - `CORS_ORIGIN` is a comma-separated allowlist (default `http://localhost:5173`).
-  Use `*` only in development. Credentials are only echoed when not `*`.
-- Production serves the SPA and `/api` from the same origin behind a reverse
-  proxy, which avoids CORS entirely.
+  Use `*` only in development. Credentials are only echoed when not `*`. In
+  production the SPA (`roadtrip4me.com`) and API (`api.roadtrip4me.com`) are
+  different origins, so `CORS_ORIGIN` must list the web origin; the API fails
+  closed (throws) when it is unset in production.
 
 ## Secrets
 
@@ -42,13 +45,16 @@
 
 ## Dependency audit
 
-Run `bun audit` regularly. Current posture (after upgrading to Nest 11 / Fastify 5 / Vite 6 and
-pinning `fast-uri`, `find-my-way`, `nanoid` via `overrides`): **0 critical, 2 high**.
+Run `bun audit` regularly. Current posture: **0 critical, 1 high, 2 moderate**.
 
-The 2 remaining high findings are both `lodash` advisories pulled in by
-`@babel/core` (a build-time-only tool). `lodash@4.17.21` has **no patched
-release** for these advisories, and babel only runs during the web build — the
-production bundle does not contain it.
+`fast-uri`, `find-my-way`, `nanoid`, `fastify` and `mysql2` are pinned to
+patched versions via root `overrides`. The remaining findings are transitive and
+not reachable in production traffic:
+
+- `deepmerge-ts` (high) — pulled in by the `prisma` CLI for config merging
+  (build / migration time only); no patched major is compatible with Prisma 7.
+- `react-router` (moderate, ×2) — patched only in the v7 major; the app uses
+  `react-router-dom` v6 and controls all navigation targets.
 
 ## Known production risks to track
 
