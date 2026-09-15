@@ -19,7 +19,6 @@
     "@nestjs/throttler": "^6",
     "@prisma/adapter-pg": "^7.9.1",
     "@prisma/client": "^7.9.1",
-    "@prisma/config": "^7.9.1",
     "@roadtrip4me/types": "workspace:*",
     "@types/pg": "^8.21.0",
     "class-transformer": "^0.5.1",
