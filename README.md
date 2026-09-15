@@ -29,19 +29,19 @@ roadtrip4me/
 │   │   └── packages/   types/ — shared types copy used by the Docker build
 │   └── api/            NestJS backend (deployed to Fly.io)
 │       ├── prisma/     schema + migrations
-│       ├── src/        API source (auth, trips, stops, votes, billing, …)
-│       └── packages/   types/ — shared types copy used by the Docker build
+│       └── src/        API source (auth, trips, stops, votes, billing, …)
 ├── packages/
-│   └── types/          Shared TypeScript interfaces (source of truth)
+│   └── types/          Shared TypeScript declarations (source of truth)
 ├── docs/               Affiliate + operational findings
 ├── docker-compose.yml  Local Postgres (PostGIS) for development
 ├── .env.prod.example   Reference list of production env vars (Fly.io secrets)
 └── package.json        Bun workspace root
 ```
 
-> The web and api Docker images are built with a self-contained `packages/types`
-> copy (Vite resolves `@roadtrip4me/types` to it at build time). Keep it in sync
-> with `packages/types/src/index.ts` when changing shared types.
+> `@roadtrip4me/types` is the single source of truth for shared types
+> (`packages/types/src/index.d.ts`). Both apps import it as a workspace package;
+> the Docker builds use the repo root as their build context so the same package
+> is available without copies.
 
 ## Prerequisites
 
