@@ -59,8 +59,15 @@ jobs:
             GOOGLE_MAPS_API_KEY=${{ secrets.GOOGLE_MAPS_API_KEY }} \
             AUTH0_DOMAIN=${{ secrets.AUTH0_DOMAIN }} \
             AUTH_DISABLED=false \
+            STAY22_AID=${{ secrets.STAY22_AID }} \
+            STAY22_CAMPAIGN=${{ secrets.STAY22_CAMPAIGN }} \
+            TRAVELPAYOUTS_HOTEL_URL_TEMPLATE=${{ secrets.TRAVELPAYOUTS_HOTEL_URL_TEMPLATE }} \
+            TRAVELPAYOUTS_MARKER=${{ secrets.TRAVELPAYOUTS_MARKER }} \
+            TRAVELPAYOUTS_SUBID=${{ secrets.TRAVELPAYOUTS_SUBID }} \
             APP_ORIGIN=https://roadtrip4me.com \
             CORS_ORIGIN=https://roadtrip4me.com
+          # NOTE: DATABASE_URL is set by `fly postgres attach` and is not managed
+          # by CI — do not add it here or an unset secret would clear it.
 
   # ─── Deploy Web ───────────────────────────────────────────────────
   deploy-web:
