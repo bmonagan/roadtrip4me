@@ -2,13 +2,21 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { AffiliateService } from './affiliate.service';
 import { BookingProvider } from './booking.provider';
 import { ExpediaProvider } from './expedia.provider';
+import { Stay22Provider } from './stay22.provider';
+import { TravelpayoutsProvider } from './travelpayouts.provider';
 
 function makeService(overrides: Record<string, unknown> = {}) {
   const prisma = {
     trip: { findFirst: vi.fn() },
     ...overrides,
   };
-  const service = new AffiliateService(prisma as never, new BookingProvider(), new ExpediaProvider());
+  const service = new AffiliateService(
+    prisma as never,
+    new BookingProvider(),
+    new ExpediaProvider(),
+    new Stay22Provider(),
+    new TravelpayoutsProvider()
+  );
   return { service, prisma };
 }
 
@@ -16,12 +24,25 @@ function makeTrip(tripStops: { stop: { name: string; city: string; state: string
   return { id: 't1', userId: 'u1', tripStops };
 }
 
+function clearAffiliateEnv() {
+  for (const key of [
+    'BOOKING_COM_AFFILIATE_ID',
+    'BOOKING_COM_API_ENABLED',
+    'EXPEDIA_AFFILIATE_ID',
+    'STAY22_AID',
+    'STAY22_CAMPAIGN',
+    'TRAVELPAYOUTS_HOTEL_URL_TEMPLATE',
+    'TRAVELPAYOUTS_MARKER',
+    'TRAVELPAYOUTS_SUBID',
+  ]) {
+    delete process.env[key];
+  }
+}
+
 describe('AffiliateService.getAccommodations', () => {
   afterEach(() => {
     vi.restoreAllMocks();
-    delete process.env['BOOKING_COM_AFFILIATE_ID'];
-    delete process.env['EXPEDIA_AFFILIATE_ID'];
-    delete process.env['BOOKING_COM_API_ENABLED'];
+    clearAffiliateEnv();
   });
 
   it('returns one card per provider per destination city (dedupes repeat cities)', async () => {
@@ -78,6 +99,28 @@ describe('AffiliateService.getAccommodations', () => {
     expect(cards[0]!.provider).toBe('expedia');
   });
 
+  it('includes Stay22 and Travelpayouts aggregator cards when configured', async () => {
+    process.env['STAY22_AID'] = 'stayaid';
+    process.env['TRAVELPAYOUTS_HOTEL_URL_TEMPLATE'] =
+      'https://example.tp.st/hotels?query={destination}&marker={marker}';
+    process.env['TRAVELPAYOUTS_MARKER'] = 'tpm';
+    const { service, prisma } = makeService();
+    prisma.trip.findFirst.mockResolvedValue(
+      makeTrip([
+        { stop: { name: 'Stop A', city: 'Chicago', state: 'IL', lat: 41.8, lng: -87.6 } },
+      ])
+    );
+
+    const cards = await service.getAccommodations('u1', 't1');
+    expect(cards).toHaveLength(2);
+    const stay22 = cards.find((c) => c.provider === 'stay22')!;
+    const travelpayouts = cards.find((c) => c.provider === 'travelpayouts')!;
+    expect(stay22.affiliateUrl).toContain('stay22.com/allez/roam');
+    expect(stay22.affiliateUrl).toContain('aid=stayaid');
+    expect(travelpayouts.affiliateUrl).toContain('marker=tpm');
+    expect(travelpayouts.affiliateUrl).toContain('query=Chicago%2C%20IL');
+  });
+
   it('returns no cards when no affiliate ids are configured', async () => {
     const { service, prisma } = makeService();
     prisma.trip.findFirst.mockResolvedValue(
@@ -98,10 +141,7 @@ describe('AffiliateService.getAccommodations', () => {
 });
 
 describe('AffiliateService.getNearbyAccommodations', () => {
-  afterEach(() => {
-    delete process.env['BOOKING_COM_AFFILIATE_ID'];
-    delete process.env['EXPEDIA_AFFILIATE_ID'];
-  });
+  afterEach(clearAffiliateEnv);
 
   it('returns cards for the destination', async () => {
     process.env['BOOKING_COM_AFFILIATE_ID'] = 'bookaid';

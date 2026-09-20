@@ -3,18 +3,24 @@ import type { AffiliateCard } from '@roadtrip4me/types';
 import { PrismaService } from '../prisma/prisma.service';
 import { BookingProvider } from './booking.provider';
 import { ExpediaProvider } from './expedia.provider';
+import { Stay22Provider } from './stay22.provider';
+import { TravelpayoutsProvider } from './travelpayouts.provider';
 import { destinationLabel, type AccommodationQuery } from './query';
 
 // Accommodation recommendations for a trip or an arbitrary destination. Cards
 // are affiliate deeplinks by default; when the Booking.com Affiliate API is
 // configured, live hotels (price/rating/image) replace the deeplink for that
-// city. See docs/affiliate-integration.md.
+// city. Stay22 (Allez) and Travelpayouts add aggregator coverage across the
+// major OTAs without needing a direct partner approval. See
+// docs/affiliate-integration.md.
 @Injectable()
 export class AffiliateService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly booking: BookingProvider,
-    private readonly expedia: ExpediaProvider
+    private readonly expedia: ExpediaProvider,
+    private readonly stay22: Stay22Provider,
+    private readonly travelpayouts: TravelpayoutsProvider
   ) {}
 
   async getAccommodations(userId: string, tripId: string): Promise<AffiliateCard[]> {
@@ -66,9 +72,18 @@ export class AffiliateService {
   private async cardsFor(queries: AccommodationQuery[]): Promise<AffiliateCard[]> {
     const groups = await Promise.all(
       queries.map(async (query) => {
-        const booking = await this.booking.cards(query);
+        const [booking, stay22] = await Promise.all([
+          this.booking.cards(query),
+          this.stay22.cards(query),
+        ]);
         const expedia = this.expedia.deeplink(query);
-        return expedia ? [...booking, expedia] : booking;
+        const travelpayouts = this.travelpayouts.deeplink(query);
+        return [
+          ...stay22,
+          ...booking,
+          ...(expedia ? [expedia] : []),
+          ...(travelpayouts ? [travelpayouts] : []),
+        ];
       })
     );
     return groups.flat();
