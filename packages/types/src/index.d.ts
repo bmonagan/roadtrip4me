@@ -124,7 +124,7 @@ export interface StopRecommendation {
 // ─── Affiliate ───────────────────────────────────────────────────────────────
 
 export interface AffiliateCard {
-  provider: 'booking_com' | 'expedia';
+  provider: 'booking_com' | 'expedia' | 'stay22' | 'travelpayouts';
   name: string;
   imageUrl: string | null;
   pricePerNight: number | null;

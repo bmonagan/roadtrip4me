@@ -3,6 +3,8 @@ import type { AffiliateCard } from '@roadtrip4me/types';
 const PROVIDER_LABELS: Record<AffiliateCard['provider'], string> = {
   booking_com: 'Booking.com',
   expedia: 'Expedia',
+  stay22: 'Stay22',
+  travelpayouts: 'Travelpayouts',
 };
 
 function formatPrice(amount: number, currency: string): string {
