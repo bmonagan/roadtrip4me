@@ -1,9 +1,18 @@
 # Affiliate / Referral Integration — Findings & Implementation Plan
 
-Status: **partner application submitted, awaiting approval.** The full code path
-(deeplinks + live-inventory provider + UI) is in place and tested; going live is
-a secrets-only change. Until `BOOKING_COM_AFFILIATE_ID` is set the "Where to
-stay" sections render nothing.
+Status: **Booking.com direct affiliate application was denied (no reason
+given).** Rather than block on that, the app now monetizes through two
+aggregators that need no direct partner approval:
+
+- **Stay22 "Allez"** — a universal affiliate redirect across Booking.com,
+  Expedia, Hotels.com, Vrbo, Agoda and GetYourGuide. Sign up free, get an
+  `AID`, and the existing cards become commissionable. This is the primary
+  path and it restores Booking.com coverage despite the denial.
+- **Travelpayouts** — a template-configured deeplink provider (paste the
+  dashboard "full link"), dormant until configured.
+
+The Booking.com direct `aid` path (`booking.provider.ts`) is kept as a
+fallback for when/if the direct program approves us.
 
 ## Current state
 
@@ -17,6 +26,13 @@ stay" sections render nothing.
     `imageUrl`. Any error/timeout falls back to the deeplink, and responses are
     cached in-process for 6h (`common/ttl-cache.ts`, no Redis).
 - `expedia.provider.ts` — Expedia referral deeplinks (no inventory API).
+- `stay22.provider.ts` — Stay22 Allez deeplinks (`/allez/roam`) covering the
+  major OTAs. No API key; just `STAY22_AID`. Coordinates are passed (preferred
+  by Allez) alongside the address.
+- `travelpayouts.provider.ts` — template-driven deeplinks. Set
+  `TRAVELPAYOUTS_HOTEL_URL_TEMPLATE` (a search URL containing `{destination}`,
+  optionally `{marker}`/`{subid}`) plus `TRAVELPAYOUTS_MARKER`; dormant until
+  configured, so no request shape is guessed.
 
 Endpoints:
 
@@ -45,55 +61,67 @@ Web:
 - `GET /accommodations/nearby` and the Stops-page "Where to stay" search.
 - The UI now renders price/rating/review/image (previously ignored).
 
-## Options to get real inventory + commission
+### What was added after the Booking.com denial
+- `stay22.provider.ts` (Allez) and `travelpayouts.provider.ts`, wired into
+  `AffiliateService` with tests; new provider ids in `@roadtrip4me/types` and
+  labels in `AccommodationList.tsx`.
 
-### Option A — Booking.com affiliate program (simplest)
-- Sign up: **Booking.com Affiliate Partner Programme**
-  (https://www.booking.com/affiliate-program.html → get an `aid`).
-- No API key needed to start: keep using the search-results deeplinks; you earn
-  commission when users book after clicking through.
-- To show real prices on-site: **Booking.com Affiliate API**
-  (`/searchresults` / hotel search) — partner approval + a signed request
-  (X-Metadata signature). That enables filling `pricePerNight`/`rating`/etc.
-- Env: `BOOKING_COM_AFFILIATE_ID` (have), optional `BOOKING_COM_SID`.
+## Monetization paths
 
-### Option B — Expedia Group Travel Redirect API (referral deeplinks, no inventory)
-- Expedia's "referral" product: travelers search on your site, then get a
-  signed link to complete the booking on Expedia. No inventory API needed.
-- Requires an **Expedia Partner Solutions (EPS) account** + Travel Redirect API
-  credentials (client id/secret) to generate signed links.
-- Env: `EXPEDIA_AFFILIATE_ID` (have as `affcid`), `EXPEDIA_TRAVELER_ID`, plus
-  Travel Redirect `EXPEDIA_REDIRECT_CLIENT_ID` / `EXPEDIA_REDIRECT_CLIENT_SECRET`.
+### 1 — Aggregators (live now, no approval)
+- **Stay22 Allez** (`stay22.provider.ts`): one `AID` covers Booking.com,
+  Expedia, Hotels.com, Vrbo, Agoda and GetYourGuide via `/allez/roam`, which
+  picks the best-converting OTA per request. Env: `STAY22_AID`, optional
+  `STAY22_CAMPAIGN`. This is how Booking.com coverage is recovered after the
+  direct denial.
+- **Travelpayouts** (`travelpayouts.provider.ts`): 100+ brands including car
+  rentals and Viator/GetYourGuide feeds. Links are generated in their dashboard,
+  so the URL shape is configured via `TRAVELPAYOUTS_HOTEL_URL_TEMPLATE` +
+  `TRAVELPAYOUTS_MARKER` (dormant until set).
 
-### Option C — Expedia Group Rapid API (full inventory, heaviest)
-- Real-time hotel search + availability + pricing (`/properties/availabilities`).
-- Requires Rapid API application via Expedia Group developer hub, likely paid /
-  revenue-share terms. Overkill until traffic justifies it.
+### 2 — Direct programs (revisit later)
+- **Booking.com direct**: denied. Reapply after building traffic; keep
+  `BOOKING_COM_AFFILIATE_ID` as the fallback path.
+- **Expedia Group Travel Redirect / Rapid API**: requires an EPS account and,
+  for Rapid, paid/revenue-share terms. Overkill until traffic justifies it.
+- **Live inventory** stays credential-gated behind `BOOKING_COM_API_ENABLED` /
+  `_URL` / `_TOKEN`; `BookingProvider.search()` populates `imageUrl`,
+  `pricePerNight`, `currency`, `rating`, `reviewCount` automatically. Confirm
+  the exact endpoint/auth scheme (the onboarding pack mentions an `X-Metadata`
+  signature) and adjust `fetchHotels()` — the single integration point.
+
+### 3 — Road-trip-native partners (Phase 2)
+Car rentals (Discover Cars, Rentalcars), activities (Viator, GetYourGuide),
+RV/camping (Outdoorsy, RVshare, Hipcamp). These reuse the provider pattern;
+`AffiliateCard` likely needs a `category` field for non-hotel results.
+
+### 4 — Grow the asset
+Traffic/SEO, Stripe Premium as the primary revenue line, sponsored community
+stops, and display ads only once traffic justifies it.
 
 ## Recommendation
 
-Start with **Booking.com affiliate deeplinks (Option A)** — zero API work, the
-existing `affiliateUrl` already carries the `aid`. Once approved for the
-**Affiliate API**, set `BOOKING_COM_API_ENABLED=true`, `BOOKING_COM_API_URL` and
-`BOOKING_COM_API_TOKEN`; `BookingProvider.search()` then populates
-`imageUrl`, `pricePerNight`, `currency`, `rating`, `reviewCount` automatically.
-Confirm the exact endpoint/auth scheme (the plan doc mentions an `X-Metadata`
-signature) against the onboarding pack and adjust `fetchHotels()` in
-`apps/api/src/affiliate/booking.provider.ts` — it is the single integration point.
+Ship the Stay22 deeplinks now (zero API work, restores Booking.com + more),
+keep Travelpayouts ready behind its template, then diversify into car
+rentals/activities. Reapply to Booking.com in 3–6 months with traffic numbers.
 
 ## TODO when implementing
 
 1. ~~Provider abstraction + deeplink fallback~~ **DONE**
    (`booking.provider.ts`, `expedia.provider.ts`).
 2. ~~Populate pricing fields + render them in the UI~~ **DONE**
-   (`AccommodationList.tsx`); verify against real API once approved.
+   (`AccommodationList.tsx`); verify against a real API once one is available.
 3. ~~In-process TTL cache (no Redis)~~ **DONE** (`common/ttl-cache.ts`, 6h TTL).
-4. ~~`GET /accommodations/nearby` search-by-coordinates~~ **DONE** (requires a
-   `city`; live API also receives lat/lng).
-5. **Remaining (credential-gated):**
-   - Obtain `aid`; set `BOOKING_COM_AFFILIATE_ID` (+ optional `SID`) as Fly
-     secrets and verify commissionable deeplinks end-to-end.
-   - On Affiliate API approval, set `BOOKING_COM_API_ENABLED` / `_URL` /
-     `_TOKEN` and validate `fetchHotels()` against the real response shape.
-   - Consider per-hotel deeplinks (currently the fallback URL is a city search)
-     and a daily cap / monitoring on live API calls.
+4. ~~`GET /accommodations/nearby` search-by-coordinates~~ **DONE**.
+5. ~~Stay22 Allez provider~~ **DONE** (`stay22.provider.ts`).
+6. ~~Travelpayouts template provider~~ **DONE** (`travelpayouts.provider.ts`).
+7. **Remaining (credential-gated):**
+   - Create a free Stay22 account; set `STAY22_AID` (+ optional
+     `STAY22_CAMPAIGN`) as Fly secrets and verify commissionable links.
+   - Register with Travelpayouts, generate the hotel "full link", set
+     `TRAVELPAYOUTS_HOTEL_URL_TEMPLATE` / `_MARKER` and verify.
+   - Reapply to Booking.com once traffic metrics exist; on Affiliate API
+     approval set `BOOKING_COM_API_ENABLED` / `_URL` / `_TOKEN` and validate
+     `fetchHotels()`.
+   - Phase 2: add car-rental / activities providers (may need a `category` on
+     `AffiliateCard`).
