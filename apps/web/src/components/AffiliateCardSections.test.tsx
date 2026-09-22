@@ -1,7 +1,11 @@
 import { render, screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import type { AffiliateCard } from '@roadtrip4me/types';
 import AffiliateCardSections from './AffiliateCardSections';
+
+vi.mock('../lib/api', () => ({
+  api: { affiliate: { trackClick: vi.fn() } },
+}));
 
 function card(
   category: AffiliateCard['category'],

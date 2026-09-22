@@ -315,3 +315,23 @@ model RecommendationRequest {
   @@unique([tripId])              // One active request per trip
   @@map("recommendation_requests")
 }
+
+// ─── Affiliate Click ─────────────────────────────────────────────────────────
+// An outbound click on an affiliate card. The on-site signal for which
+// provider/category/destination drives traffic; actual revenue is reconciled
+// from the partner dashboards. tripId is a loose reference (no FK) so clicks
+// from the public Stops page — which has no trip — are recorded too.
+
+model AffiliateClick {
+  id          String   @id @default(cuid())
+  provider    String
+  category    String
+  destination String
+  tripId      String?
+  createdAt   DateTime @default(now())
+
+  @@index([provider, createdAt(sort: Desc)])
+  @@index([category, createdAt(sort: Desc)])
+  @@index([destination])
+  @@map("affiliate_clicks")
+}

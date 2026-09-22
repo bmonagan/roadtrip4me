@@ -15,5 +15,5 @@ export default function Accommodations({ trip }: { trip: Trip }) {
   if (isError) return <p className="error">Unable to load recommendations.</p>;
   if (!data || data.length === 0) return null;
 
-  return <AffiliateCardSections cards={data} />;
+  return <AffiliateCardSections cards={data} tripId={trip.id} />;
 }

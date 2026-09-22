@@ -242,6 +242,23 @@ export const api = {
     nearby: (params: NearbyAccommodationsParams) =>
       request<AffiliateCard[]>(`/accommodations/nearby${toQueryString(params)}`),
   },
+  affiliate: {
+    // Fire-and-forget: records the click without delaying navigation. `keepalive`
+    // lets it survive the page navigating to the affiliate site.
+    trackClick: (payload: {
+      provider: AffiliateCard['provider'];
+      category: AffiliateCard['category'];
+      destination: string;
+      tripId?: string;
+    }) => {
+      void fetch(`${API_BASE}/affiliate/click`, {
+        method: 'POST',
+        keepalive: true,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      }).catch(() => undefined);
+    },
+  },
   stops: {
     list: (params?: ListStopsParams) =>
       request<PaginatedResponse<Stop>>(`/stops${toQueryString(params)}`),

@@ -14,7 +14,13 @@ const ORDER: AffiliateCategory[] = ['accommodation', 'activity', 'car_rental'];
  * with no cards are omitted, so a destination with only hotels renders just
  * "Where to stay".
  */
-export default function AffiliateCardSections({ cards }: { cards: AffiliateCard[] }) {
+export default function AffiliateCardSections({
+  cards,
+  tripId,
+}: {
+  cards: AffiliateCard[];
+  tripId?: string;
+}) {
   const groups = ORDER.map((category) => ({
     category,
     cards: cards.filter((card) => card.category === category),
@@ -25,7 +31,7 @@ export default function AffiliateCardSections({ cards }: { cards: AffiliateCard[
       {groups.map((group) => (
         <section key={group.category} className="stops-section">
           <h2>{HEADINGS[group.category]}</h2>
-          <AccommodationList cards={group.cards} />
+          <AccommodationList cards={group.cards} tripId={tripId} />
         </section>
       ))}
     </>

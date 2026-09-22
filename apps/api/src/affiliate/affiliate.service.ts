@@ -5,6 +5,7 @@ import { BookingProvider } from './booking.provider';
 import { ExpediaProvider } from './expedia.provider';
 import { Stay22Provider } from './stay22.provider';
 import { TravelpayoutsProvider } from './travelpayouts.provider';
+import type { TrackClickDto } from './dto/track-click.dto';
 import { destinationLabel, type AccommodationQuery } from './query';
 
 // Accommodation recommendations for a trip or an arbitrary destination. Cards
@@ -67,6 +68,18 @@ export class AffiliateService {
     const destination = city?.trim();
     if (!destination) return [];
     return this.cardsFor([{ destination, lat, lng }]);
+  }
+
+  /** Records an outbound affiliate-card click for later reporting. */
+  async recordClick(input: TrackClickDto): Promise<void> {
+    await this.prisma.affiliateClick.create({
+      data: {
+        provider: input.provider,
+        category: input.category,
+        destination: input.destination,
+        tripId: input.tripId ?? null,
+      },
+    });
   }
 
   private async cardsFor(queries: AccommodationQuery[]): Promise<AffiliateCard[]> {

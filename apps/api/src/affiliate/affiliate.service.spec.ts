@@ -8,6 +8,7 @@ import { TravelpayoutsProvider } from './travelpayouts.provider';
 function makeService(overrides: Record<string, unknown> = {}) {
   const prisma = {
     trip: { findFirst: vi.fn() },
+    affiliateClick: { create: vi.fn() },
     ...overrides,
   };
   const service = new AffiliateService(
@@ -160,5 +161,42 @@ describe('AffiliateService.getNearbyAccommodations', () => {
     const { service } = makeService();
     expect(await service.getNearbyAccommodations(undefined, 1, 2)).toHaveLength(0);
     expect(await service.getNearbyAccommodations('   ', 1, 2)).toHaveLength(0);
+  });
+});
+
+describe('AffiliateService.recordClick', () => {
+  it('persists the click with its trip id', async () => {
+    const { service, prisma } = makeService();
+    await service.recordClick({
+      provider: 'stay22',
+      category: 'activity',
+      destination: 'Chicago, IL',
+      tripId: 't1',
+    });
+    expect(prisma.affiliateClick.create).toHaveBeenCalledWith({
+      data: {
+        provider: 'stay22',
+        category: 'activity',
+        destination: 'Chicago, IL',
+        tripId: 't1',
+      },
+    });
+  });
+
+  it('stores a null trip id for clicks outside a trip', async () => {
+    const { service, prisma } = makeService();
+    await service.recordClick({
+      provider: 'stay22',
+      category: 'accommodation',
+      destination: 'Austin, TX',
+    });
+    expect(prisma.affiliateClick.create).toHaveBeenCalledWith({
+      data: {
+        provider: 'stay22',
+        category: 'accommodation',
+        destination: 'Austin, TX',
+        tripId: null,
+      },
+    });
   });
 });

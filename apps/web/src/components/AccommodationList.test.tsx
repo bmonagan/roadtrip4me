@@ -1,7 +1,12 @@
-import { render, screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
 import type { AffiliateCard } from '@roadtrip4me/types';
+import { api } from '../lib/api';
 import AccommodationList from './AccommodationList';
+
+vi.mock('../lib/api', () => ({
+  api: { affiliate: { trackClick: vi.fn() } },
+}));
 
 const base: AffiliateCard = {
   provider: 'booking_com',
@@ -55,5 +60,16 @@ describe('AccommodationList', () => {
   it('labels Expedia cards', () => {
     render(<AccommodationList cards={[{ ...base, provider: 'expedia' }]} />);
     expect(screen.getByText('Expedia')).toBeTruthy();
+  });
+
+  it('tracks the click with the card dimensions and trip id', () => {
+    render(<AccommodationList cards={[base]} tripId="t1" />);
+    fireEvent.click(screen.getByRole('link', { name: 'View deals' }));
+    expect(api.affiliate.trackClick).toHaveBeenCalledWith({
+      provider: 'booking_com',
+      category: 'accommodation',
+      destination: 'Chicago, IL',
+      tripId: 't1',
+    });
   });
 });

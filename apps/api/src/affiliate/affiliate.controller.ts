@@ -1,7 +1,8 @@
-import { Controller, Get, Param, Query } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, Param, Post, Query } from '@nestjs/common';
 import { CurrentUserId } from '../auth/current-user.decorator';
 import { Public } from '../auth/public.decorator';
 import { AffiliateService } from './affiliate.service';
+import { TrackClickDto } from './dto/track-click.dto';
 
 @Controller('trips')
 export class AffiliateController {
@@ -40,4 +41,21 @@ export class AccommodationsController {
 function toFiniteNumber(value: string | undefined): number {
   const parsed = Number.parseFloat(value ?? '');
   return Number.isFinite(parsed) ? parsed : 0;
+}
+
+@Controller('affiliate')
+export class AffiliateClickController {
+  constructor(private readonly affiliateService: AffiliateService) {}
+
+  /**
+   * Records an outbound affiliate-card click. Public and fire-and-forget: the
+   * web fires it alongside opening the link, and a failure must never block the
+   * user's navigation, so it always returns 204.
+   */
+  @Public()
+  @Post('click')
+  @HttpCode(204)
+  async click(@Body() dto: TrackClickDto): Promise<void> {
+    await this.affiliateService.recordClick(dto);
+  }
 }

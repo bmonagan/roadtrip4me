@@ -41,6 +41,11 @@ Endpoints:
 - `GET /api/v1/accommodations/nearby?city=&lat=&lng=` → cards for an arbitrary
   destination (public, used by the Stops page). `city` is required — reverse
   geocoding would add a paid Google call.
+- `POST /api/v1/affiliate/click` → records an outbound click (public, 204).
+  The web fires it alongside opening the link; rows land in `affiliate_clicks`
+  with provider/category/destination (plus `tripId` when clicked from a trip).
+  This is the on-site signal for which cards get clicked — actual revenue is
+  reconciled from the partner dashboards.
 
 Web:
 
@@ -68,6 +73,9 @@ Web:
 - Phase 2: `category` on `AffiliateCard`, Stay22 activities (GetYourGuide),
   multi-vertical Travelpayouts (hotel/activity/car), and category sections in
   the UI (`AffiliateCardSections.tsx`).
+- Affiliate click tracking: `affiliate_clicks` table (migration `0004`),
+  `POST /affiliate/click`, and a fire-and-forget `trackClick` call from
+  `AccommodationList.tsx` (also carries `destination` on the card).
 
 ## Monetization paths
 

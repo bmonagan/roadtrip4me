@@ -1,4 +1,5 @@
 import type { AffiliateCard } from '@roadtrip4me/types';
+import { api } from '../lib/api';
 
 const PROVIDER_LABELS: Record<AffiliateCard['provider'], string> = {
   booking_com: 'Booking.com',
@@ -20,7 +21,13 @@ function formatPrice(amount: number, currency: string): string {
   }
 }
 
-export default function AccommodationList({ cards }: { cards: AffiliateCard[] }) {
+export default function AccommodationList({
+  cards,
+  tripId,
+}: {
+  cards: AffiliateCard[];
+  tripId?: string;
+}) {
   return (
     <ul className="card-list accommodation-list">
       {cards.map((card, i) => {
@@ -62,6 +69,14 @@ export default function AccommodationList({ cards }: { cards: AffiliateCard[] })
               target="_blank"
               rel="noopener noreferrer sponsored"
               className="btn primary"
+              onClick={() =>
+                api.affiliate.trackClick({
+                  provider: card.provider,
+                  category: card.category,
+                  destination: card.destination,
+                  tripId,
+                })
+              }
             >
               View deals
             </a>
