@@ -72,17 +72,17 @@ export class AffiliateService {
   private async cardsFor(queries: AccommodationQuery[]): Promise<AffiliateCard[]> {
     const groups = await Promise.all(
       queries.map(async (query) => {
-        const [booking, stay22] = await Promise.all([
+        const [booking, stay22, travelpayouts] = await Promise.all([
           this.booking.cards(query),
           this.stay22.cards(query),
+          this.travelpayouts.cards(query),
         ]);
         const expedia = this.expedia.deeplink(query);
-        const travelpayouts = this.travelpayouts.deeplink(query);
         return [
           ...stay22,
           ...booking,
           ...(expedia ? [expedia] : []),
-          ...(travelpayouts ? [travelpayouts] : []),
+          ...travelpayouts,
         ];
       })
     );

@@ -112,11 +112,13 @@ describe('AffiliateService.getAccommodations', () => {
     );
 
     const cards = await service.getAccommodations('u1', 't1');
-    expect(cards).toHaveLength(2);
-    const stay22 = cards.find((c) => c.provider === 'stay22')!;
+    expect(cards).toHaveLength(3);
+    const stay22 = cards.filter((c) => c.provider === 'stay22');
     const travelpayouts = cards.find((c) => c.provider === 'travelpayouts')!;
-    expect(stay22.affiliateUrl).toContain('stay22.com/allez/roam');
-    expect(stay22.affiliateUrl).toContain('aid=stayaid');
+    expect(stay22.map((c) => c.category)).toEqual(['accommodation', 'activity']);
+    expect(stay22[0]!.affiliateUrl).toContain('stay22.com/allez/roam');
+    expect(stay22[1]!.affiliateUrl).toContain('stay22.com/allez/getyourguide');
+    expect(travelpayouts.category).toBe('accommodation');
     expect(travelpayouts.affiliateUrl).toContain('marker=tpm');
     expect(travelpayouts.affiliateUrl).toContain('query=Chicago%2C%20IL');
   });
