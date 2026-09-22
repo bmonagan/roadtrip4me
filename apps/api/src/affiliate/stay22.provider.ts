@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import type { AffiliateCard } from '@roadtrip4me/types';
+import type { AffiliateCard, AffiliateCategory } from '@roadtrip4me/types';
 import type { AccommodationQuery } from './query';
 
 /**
@@ -13,8 +13,29 @@ import type { AccommodationQuery } from './query';
  */
 @Injectable()
 export class Stay22Provider {
-  /** Affiliate-tagged Allez card, or null when no aid is configured. */
+  /** Accommodation card via `/allez/roam` (AI-picked OTA), or null without an aid. */
   deeplink(query: AccommodationQuery): AffiliateCard | null {
+    return this.card(query, 'roam', 'accommodation', 'Stays');
+  }
+
+  /** Things-to-do card via `/allez/getyourguide`, or null without an aid. */
+  activity(query: AccommodationQuery): AffiliateCard | null {
+    return this.card(query, 'getyourguide', 'activity', 'Things to do');
+  }
+
+  /** Every Stay22 vertical for a destination (empty when unconfigured). */
+  async cards(query: AccommodationQuery): Promise<AffiliateCard[]> {
+    return [this.deeplink(query), this.activity(query)].filter(
+      (card): card is AffiliateCard => card !== null
+    );
+  }
+
+  private card(
+    query: AccommodationQuery,
+    slug: string,
+    category: AffiliateCategory,
+    label: string
+  ): AffiliateCard | null {
     const aid = process.env['STAY22_AID'];
     if (!aid) return null;
 
@@ -31,21 +52,15 @@ export class Stay22Provider {
 
     return {
       provider: 'stay22',
-      category: 'accommodation',
-      name: `Stays in ${query.destination}`,
+      category,
+      name: `${label} in ${query.destination}`,
       imageUrl: null,
       pricePerNight: null,
       currency: 'USD',
       rating: null,
       reviewCount: null,
-      affiliateUrl: `https://www.stay22.com/allez/roam?${params.toString()}`,
+      affiliateUrl: `https://www.stay22.com/allez/${slug}?${params.toString()}`,
       coordinates: { lat: query.lat, lng: query.lng },
     };
-  }
-
-  /** Allez only produces deeplinks today; async kept for provider parity. */
-  async cards(query: AccommodationQuery): Promise<AffiliateCard[]> {
-    const card = this.deeplink(query);
-    return card ? [card] : [];
   }
 }
