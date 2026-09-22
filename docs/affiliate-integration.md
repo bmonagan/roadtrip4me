@@ -65,6 +65,9 @@ Web:
 - `stay22.provider.ts` (Allez) and `travelpayouts.provider.ts`, wired into
   `AffiliateService` with tests; new provider ids in `@roadtrip4me/types` and
   labels in `AccommodationList.tsx`.
+- Phase 2: `category` on `AffiliateCard`, Stay22 activities (GetYourGuide),
+  multi-vertical Travelpayouts (hotel/activity/car), and category sections in
+  the UI (`AffiliateCardSections.tsx`).
 
 ## Monetization paths
 
@@ -90,10 +93,20 @@ Web:
   the exact endpoint/auth scheme (the onboarding pack mentions an `X-Metadata`
   signature) and adjust `fetchHotels()` — the single integration point.
 
-### 3 — Road-trip-native partners (Phase 2)
-Car rentals (Discover Cars, Rentalcars), activities (Viator, GetYourGuide),
-RV/camping (Outdoorsy, RVshare, Hipcamp). These reuse the provider pattern;
-`AffiliateCard` likely needs a `category` field for non-hotel results.
+### 3 — Road-trip-native partners (Phase 2) — DONE
+`AffiliateCard` now carries a `category` (`accommodation` | `activity` |
+`car_rental`), and the UI groups cards into "Where to stay" / "Things to do" /
+"Getting around".
+
+- **Stay22** emits an activities card via `/allez/getyourguide` alongside the
+  accommodation `/allez/roam` link (same `AID`).
+- **Travelpayouts** is now multi-vertical: set `TRAVELPAYOUTS_HOTEL_URL_TEMPLATE`
+  / `_ACTIVITY_URL_TEMPLATE` / `_CAR_URL_TEMPLATE` (plus `_MARKER`) for Viator,
+  Discover Cars / Rentalcars, etc. Each vertical is independent and dormant
+  until its template is set.
+
+Still open: RV/camping (Outdoorsy, RVshare, Hipcamp) — add as another
+Travelpayouts vertical or a dedicated provider once approved.
 
 ### 4 — Grow the asset
 Traffic/SEO, Stripe Premium as the primary revenue line, sponsored community
@@ -123,5 +136,6 @@ rentals/activities. Reapply to Booking.com in 3–6 months with traffic numbers.
    - Reapply to Booking.com once traffic metrics exist; on Affiliate API
      approval set `BOOKING_COM_API_ENABLED` / `_URL` / `_TOKEN` and validate
      `fetchHotels()`.
-   - Phase 2: add car-rental / activities providers (may need a `category` on
-     `AffiliateCard`).
+   - ~~Phase 2: add car-rental / activities providers~~ **DONE** (Stay22
+     GetYourGuide + multi-vertical Travelpayouts + UI category sections).
+     Remaining: RV/camping providers (Outdoorsy, RVshare, Hipcamp).
