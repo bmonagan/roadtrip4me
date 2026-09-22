@@ -71,6 +71,7 @@ export class TravelpayoutsProvider {
     return {
       provider: 'travelpayouts',
       category: vertical.category,
+      destination: query.destination,
       name: `${vertical.label} in ${query.destination}`,
       imageUrl: null,
       pricePerNight: null,

@@ -12,6 +12,7 @@ function card(
     provider,
     category,
     name,
+    destination: 'Austin, TX',
     imageUrl: null,
     pricePerNight: null,
     currency: 'USD',

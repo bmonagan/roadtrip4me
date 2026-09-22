@@ -129,6 +129,7 @@ export interface AffiliateCard {
   provider: 'booking_com' | 'expedia' | 'stay22' | 'travelpayouts';
   category: AffiliateCategory;
   name: string;
+  destination: string;
   imageUrl: string | null;
   pricePerNight: number | null;
   currency: string;

@@ -7,6 +7,7 @@ const base: AffiliateCard = {
   provider: 'booking_com',
   category: 'accommodation',
   name: 'The Loop Hotel',
+  destination: 'Chicago, IL',
   imageUrl: null,
   pricePerNight: null,
   currency: 'USD',

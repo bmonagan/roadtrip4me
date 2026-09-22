@@ -53,6 +53,7 @@ export class Stay22Provider {
     return {
       provider: 'stay22',
       category,
+      destination: query.destination,
       name: `${label} in ${query.destination}`,
       imageUrl: null,
       pricePerNight: null,
