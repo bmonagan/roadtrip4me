@@ -34,6 +34,7 @@ export class TravelpayoutsProvider {
 
     return {
       provider: 'travelpayouts',
+      category: 'accommodation',
       name: `Hotels in ${query.destination}`,
       imageUrl: null,
       pricePerNight: null,

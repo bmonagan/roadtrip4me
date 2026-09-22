@@ -5,6 +5,7 @@ import AccommodationList from './AccommodationList';
 
 const base: AffiliateCard = {
   provider: 'booking_com',
+  category: 'accommodation',
   name: 'The Loop Hotel',
   imageUrl: null,
   pricePerNight: null,

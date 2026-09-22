@@ -21,6 +21,7 @@ export class ExpediaProvider {
 
     return {
       provider: 'expedia',
+      category: 'accommodation',
       name: `Hotels in ${query.destination}`,
       imageUrl: null,
       pricePerNight: null,

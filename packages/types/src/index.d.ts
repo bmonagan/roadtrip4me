@@ -123,8 +123,11 @@ export interface StopRecommendation {
 
 // ─── Affiliate ───────────────────────────────────────────────────────────────
 
+export type AffiliateCategory = 'accommodation' | 'activity' | 'car_rental';
+
 export interface AffiliateCard {
   provider: 'booking_com' | 'expedia' | 'stay22' | 'travelpayouts';
+  category: AffiliateCategory;
   name: string;
   imageUrl: string | null;
   pricePerNight: number | null;

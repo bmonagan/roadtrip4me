@@ -74,6 +74,7 @@ export class BookingProvider {
     if (!url) return null;
     return {
       provider: 'booking_com',
+      category: 'accommodation',
       name: `Hotels in ${query.destination}`,
       imageUrl: null,
       pricePerNight: null,
@@ -162,6 +163,7 @@ export function mapBookingHotels(
 
     cards.push({
       provider: 'booking_com',
+      category: 'accommodation',
       name,
       imageUrl: firstImage(row['photo_urls'], row['image_url'], row['imageUrl'], row['main_photo_url']),
       pricePerNight: firstNumber(

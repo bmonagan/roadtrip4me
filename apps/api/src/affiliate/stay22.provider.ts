@@ -31,6 +31,7 @@ export class Stay22Provider {
 
     return {
       provider: 'stay22',
+      category: 'accommodation',
       name: `Stays in ${query.destination}`,
       imageUrl: null,
       pricePerNight: null,
