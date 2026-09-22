@@ -7,6 +7,8 @@ const query: AccommodationQuery = { destination: 'Chicago, IL', lat: 41.88, lng:
 function clearEnv() {
   for (const key of [
     'TRAVELPAYOUTS_HOTEL_URL_TEMPLATE',
+    'TRAVELPAYOUTS_ACTIVITY_URL_TEMPLATE',
+    'TRAVELPAYOUTS_CAR_URL_TEMPLATE',
     'TRAVELPAYOUTS_MARKER',
     'TRAVELPAYOUTS_SUBID',
   ]) {
@@ -35,6 +37,7 @@ describe('TravelpayoutsProvider', () => {
     const card = new TravelpayoutsProvider().deeplink(query)!;
 
     expect(card.provider).toBe('travelpayouts');
+    expect(card.category).toBe('accommodation');
     expect(card.name).toBe('Hotels in Chicago, IL');
     expect(card.affiliateUrl).toContain('query=Chicago%2C%20IL');
     expect(card.affiliateUrl).toContain('marker=marker123');
@@ -48,10 +51,33 @@ describe('TravelpayoutsProvider', () => {
     expect(new TravelpayoutsProvider().deeplink(query)).toBeNull();
   });
 
-  it('cards() wraps the deeplink and is empty when dormant', async () => {
-    process.env['TRAVELPAYOUTS_HOTEL_URL_TEMPLATE'] = 'https://example.tp.st/hotels?query={destination}';
+  it('builds activity and car-rental cards from their own templates', () => {
+    process.env['TRAVELPAYOUTS_ACTIVITY_URL_TEMPLATE'] =
+      'https://example.tp.st/tours?query={destination}';
+    process.env['TRAVELPAYOUTS_CAR_URL_TEMPLATE'] =
+      'https://example.tp.st/cars?pickup={destination}';
     const provider = new TravelpayoutsProvider();
-    expect(await provider.cards(query)).toHaveLength(1);
+
+    expect(provider.activity(query)).toMatchObject({
+      category: 'activity',
+      name: 'Things to do in Chicago, IL',
+    });
+    expect(provider.carRental(query)).toMatchObject({
+      category: 'car_rental',
+      name: 'Car rentals in Chicago, IL',
+    });
+  });
+
+  it('cards() returns every configured vertical and is empty when dormant', async () => {
+    process.env['TRAVELPAYOUTS_HOTEL_URL_TEMPLATE'] =
+      'https://example.tp.st/hotels?query={destination}';
+    process.env['TRAVELPAYOUTS_CAR_URL_TEMPLATE'] =
+      'https://example.tp.st/cars?pickup={destination}';
+    const provider = new TravelpayoutsProvider();
+    expect((await provider.cards(query)).map((c) => c.category)).toEqual([
+      'accommodation',
+      'car_rental',
+    ]);
 
     clearEnv();
     expect(await provider.cards(query)).toHaveLength(0);
