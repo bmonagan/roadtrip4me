@@ -1,0 +1,14 @@
+# gitleaks configuration.
+#
+# Extends the built-in ruleset. The only entry below is a *public*, client-side
+# Mapbox display token that was previously baked into `apps/web/fly.toml` and
+# has since been rotated. Public tokens are not secrets (they ship in the
+# browser bundle), so it is allowlisted to keep the full-history scan green.
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Rotated Mapbox public display token (client-side, not a secret)"
+regexes = [
+  '''pk\.eyJ1IjoiYm1vbmFnYW4i[A-Za-z0-9._-]+''',
+]

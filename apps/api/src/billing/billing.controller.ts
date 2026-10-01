@@ -3,6 +3,7 @@ import type { RawBodyRequest } from '@nestjs/common/interfaces';
 import Stripe from 'stripe';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { Public } from '../auth/public.decorator';
+import { isDemoMode } from '../demo/demo';
 import type { User as UserModel } from '../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -17,6 +18,16 @@ export class BillingController {
 
   @Post('checkout')
   async checkout(@CurrentUser() user: UserModel): Promise<{ url: string }> {
+    // Demo mode simulates a successful upgrade without Stripe: mark the user
+    // premium and bounce them back to the app's upgrade landing.
+    if (isDemoMode()) {
+      await this.prisma.user.update({
+        where: { id: user.id },
+        data: { isPremium: true },
+      });
+      return { url: `${this.origin()}/?upgraded=1` };
+    }
+
     const secretKey = process.env['STRIPE_SECRET_KEY'];
     const priceId = process.env['STRIPE_PRICE_ID'];
     if (!secretKey || !priceId) {
@@ -50,6 +61,14 @@ export class BillingController {
 
   @Post('cancel')
   async cancel(@CurrentUser() user: UserModel): Promise<{ message: string }> {
+    if (isDemoMode()) {
+      await this.prisma.user.update({
+        where: { id: user.id },
+        data: { isPremium: false },
+      });
+      return { message: 'Subscription cancelled successfully' };
+    }
+
     if (!user.stripeCustomerId) {
       throw new BadGatewayException('No Stripe customer found');
     }

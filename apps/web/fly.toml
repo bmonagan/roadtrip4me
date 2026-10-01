@@ -8,7 +8,9 @@ primary_region = "ord"
   dockerfile = "Dockerfile"
 
 [build.args]
-  VITE_MAPBOX_TOKEN = "pk.eyJ1IjoiYm1vbmFnYW4iLCJhIjoiY21zODE1ODI0MDlvMzJ3cHd1Y3JleTNhMyJ9.ENqX-uNkjWg6g4mLhm4Rvw"
+  # VITE_* values are baked into the bundle at build time. Supply your own at
+  # deploy time (e.g. --build-arg VITE_MAPBOX_TOKEN=...) — do not commit keys.
+  VITE_MAPBOX_TOKEN = ""
   VITE_AUTH0_DOMAIN = ""
   VITE_AUTH0_CLIENT_ID = ""
   VITE_AUTH0_AUDIENCE = ""

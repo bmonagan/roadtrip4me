@@ -190,6 +190,12 @@ async function main() {
       destLng: -118.4912,
       startDate: new Date('2025-06-15'),
       endDate: new Date('2025-06-29'),
+      // Pre-computed driving route (Chicago → Santa Monica) so the demo map
+      // renders a real polyline without any Google Routes call at runtime.
+      totalDistanceMeters: 3272547,
+      totalDurationSeconds: 128482,
+      encodedPolyline:
+        'cir~F`ezuOfgOlssCurSb}cCxmh@htkEdb]|qd@uf^t`{Fod@jqxHheg@joeEq\\hvgGd{r@~xo@xz@toq@|nnAz~aCej@tn`Ir~\\xyvB}jF`_}Bc`mAttpEim@dpaEb|dAd}pFdb}ArqtBll`@xdgExvnAvfvBmwLtypA~rr@hvgBmah@`qgB|ld@|b_FbpmAt}|AqkU`qpBnny@fmcBujJdksChcm@lujFiua@`yzA~~cA|bqAvX~l~@hisAp{@rh`FfodEzco@bkzCxmcB|ffC|gsCtv`AvyqBbyyHba~C~j}ApmHfmwD',
       tripStops: {
         create: createdStops.slice(0, 3).map((stop, i) => ({
           stopId: stop.id,

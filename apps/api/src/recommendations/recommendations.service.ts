@@ -1,11 +1,11 @@
-import { BadGatewayException, Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { decode } from '@googlemaps/polyline-codec';
 import type { StopRecommendation } from '@roadtrip4me/types';
 import type { Trip as TripModel } from '../generated/prisma/client';
 import { distanceToRouteMeters, type GeoPoint } from '../common/geo';
 import { PrismaService } from '../prisma/prisma.service';
 import { GoogleMapsService } from '../maps/google-maps.service';
-import { deepseekJson } from './deepseek';
+import { DeepseekClient } from './deepseek.client';
 import { STOP_CATEGORIES, parseStops, type ParsedStop } from './parse';
 import type { RecommendationRequestDto } from './dto/recommendation-request.dto';
 
@@ -39,6 +39,7 @@ export class RecommendationsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly maps: GoogleMapsService,
+    private readonly deepseek: DeepseekClient,
   ) {}
 
   async recommend(
@@ -46,18 +47,13 @@ export class RecommendationsService {
     tripId: string,
     dto: RecommendationRequestDto
   ): Promise<RecommendedStop[]> {
-    const apiKey = process.env['DEEPSEEK_API_KEY'];
-    if (!apiKey) {
-      throw new BadGatewayException('DEEPSEEK_API_KEY is not configured');
-    }
-
     const trip = await this.prisma.trip.findFirst({ where: { id: tripId, userId } });
     if (!trip) {
       throw new NotFoundException(`Trip ${tripId} not found`);
     }
 
     const route = await this.buildRoute(trip);
-    const raw = await deepseekJson(apiKey, SYSTEM_PROMPT, this.buildUserPrompt(trip, dto));
+    const raw = await this.deepseek.json(SYSTEM_PROMPT, this.buildUserPrompt(trip, dto));
     const parsed = await this.enrichCoordinates(parseStops(raw));
 
     return parsed.map((stop) => ({
