@@ -1,15 +1,17 @@
 # Screenshots
 
-The README embeds `trip-planner.png` from this directory. Add the following
-captures (PNG or GIF) before publishing the repo:
+The README embeds these captures. Re-run the steps below if the UI changes.
 
-| File | What to capture |
+| File | What it shows |
 |---|---|
-| `trip-planner.png` | Trip detail page showing the map with the Route 66 polyline and the stops list (hero image). |
+| `home.png` | Landing page with the "Plan your trip" form (hero image). |
+| `trip-planner.png` | Trip detail page with the map route polyline and stops list. |
 | `stops.png` | Stops feed with categories, scores, and vote buttons. |
-| `recommendations.png` | AI recommendation results after clicking **Get recommendations** on a trip. |
+| `recommendations.png` | AI recommendation results after clicking **Get recommendations**. |
 | `stays.png` | "Where to stay" affiliate cards (accommodation/activity/car sections). |
-| `account.png` | Account page showing Premium status and the upgrade/cancel controls. |
+| `trips.png` | My Trips list. |
+| `premium.png` | Premium page (active subscription + cancel). |
+| `account.png` | Account page (dev-mode identity picker). |
 | `walkthrough.gif` | Optional 20–40s screen recording of the core flow. |
 
 ## How to capture cleanly

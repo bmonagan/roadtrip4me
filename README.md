@@ -12,7 +12,7 @@ subscriptions.
 > decommissioned to keep it a showcase. It runs locally in **demo mode with no
 > API keys required**.
 
-![Trip planner](docs/screenshots/trip-planner.png)
+![Roadtrip4me landing page](docs/screenshots/home.png)
 
 ## Features
 
@@ -161,6 +161,20 @@ roadtrip4me/
 ├── docker-compose.yml  Local Postgres (PostGIS)
 └── .github/workflows/  CI (typecheck, lint, test, build, secret scan)
 ```
+
+## Screenshots
+
+| Trip planner (route + stops) | Community stops |
+|---|---|
+| ![Trip planner](docs/screenshots/trip-planner.png) | ![Stops](docs/screenshots/stops.png) |
+
+| AI recommendations | Where to stay |
+|---|---|
+| ![AI recommendations](docs/screenshots/recommendations.png) | ![Where to stay](docs/screenshots/stays.png) |
+
+| My trips | Premium |
+|---|---|
+| ![My trips](docs/screenshots/trips.png) | ![Premium](docs/screenshots/premium.png) |
 
 ## License
 
